@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e6c7ff97-83fa-4199-aae3-7500f00a366d",
+  "path": "agent-email",
+  "path_key": "agent-email",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

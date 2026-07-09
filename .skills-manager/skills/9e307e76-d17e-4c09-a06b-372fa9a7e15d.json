@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9e307e76-d17e-4c09-a06b-372fa9a7e15d",
+  "path": "note-organizer",
+  "path_key": "note-organizer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

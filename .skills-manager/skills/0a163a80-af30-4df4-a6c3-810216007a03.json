@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0a163a80-af30-4df4-a6c3-810216007a03",
+  "path": "tencentos-expert",
+  "path_key": "tencentos-expert",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

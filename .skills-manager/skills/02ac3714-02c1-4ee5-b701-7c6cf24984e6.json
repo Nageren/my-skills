@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "02ac3714-02c1-4ee5-b701-7c6cf24984e6",
+  "path": "content-factory",
+  "path_key": "content-factory",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

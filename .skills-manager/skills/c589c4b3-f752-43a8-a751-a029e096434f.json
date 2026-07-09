@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "c589c4b3-f752-43a8-a751-a029e096434f",
+  "path": "flights",
+  "path_key": "flights",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

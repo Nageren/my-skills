@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "405e5153-3957-40be-9007-bc908e7e5ecb",
+  "path": "hermes-macos-gateway",
+  "path_key": "hermes-macos-gateway",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

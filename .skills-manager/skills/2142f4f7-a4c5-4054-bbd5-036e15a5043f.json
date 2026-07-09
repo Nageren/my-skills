@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2142f4f7-a4c5-4054-bbd5-036e15a5043f",
+  "path": "tencent-ssv-techforgood",
+  "path_key": "tencent-ssv-techforgood",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

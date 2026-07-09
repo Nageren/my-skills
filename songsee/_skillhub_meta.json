@@ -1,0 +1,9 @@
+{
+  "name": "音频可视化",
+  "slug": "songsee",
+  "version": "1.0.0",
+  "installedAt": 1779948791111,
+  "source": "marketplace",
+  "iconSource": "songsee",
+  "preinstalledTemplate": true
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0ecc4cd2-86c4-438a-a6c7-e03a5381f6a5",
+  "path": "flutter-dev",
+  "path_key": "flutter-dev",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

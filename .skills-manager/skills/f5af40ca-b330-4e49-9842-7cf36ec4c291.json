@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f5af40ca-b330-4e49-9842-7cf36ec4c291",
+  "path": "cloudflare-worker-builder",
+  "path_key": "cloudflare-worker-builder",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

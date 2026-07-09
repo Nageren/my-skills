@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d9dd2ad5-94f3-4ecc-b296-4da26073b4ea",
+  "path": "yuandian",
+  "path_key": "yuandian",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

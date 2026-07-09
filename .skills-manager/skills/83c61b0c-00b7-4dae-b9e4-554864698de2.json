@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "83c61b0c-00b7-4dae-b9e4-554864698de2",
+  "path": "a-stock-analysis",
+  "path_key": "a-stock-analysis",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

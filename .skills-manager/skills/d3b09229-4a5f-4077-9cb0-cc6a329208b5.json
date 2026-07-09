@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d3b09229-4a5f-4077-9cb0-cc6a329208b5",
+  "path": "fintech-engineer",
+  "path_key": "fintech-engineer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

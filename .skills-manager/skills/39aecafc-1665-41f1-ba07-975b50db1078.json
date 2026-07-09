@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "39aecafc-1665-41f1-ba07-975b50db1078",
+  "path": "ima-skills",
+  "path_key": "ima-skills",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7e0b35eb-8889-416b-99b4-40d842fc6938",
+  "path": "tutor-skills",
+  "path_key": "tutor-skills",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3328690d-408a-46bd-a48b-e67fcb774cdd",
+  "path": "autoglm-stock-analysis",
+  "path_key": "autoglm-stock-analysis",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

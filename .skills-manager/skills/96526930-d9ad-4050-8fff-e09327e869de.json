@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "96526930-d9ad-4050-8fff-e09327e869de",
+  "path": "anti-distill",
+  "path_key": "anti-distill",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

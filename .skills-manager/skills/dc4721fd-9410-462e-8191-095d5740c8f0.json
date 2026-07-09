@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "dc4721fd-9410-462e-8191-095d5740c8f0",
+  "path": "android-native-dev",
+  "path_key": "android-native-dev",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

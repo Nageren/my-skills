@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "04a7c42e-f144-4cfe-8bd2-e807738a456b",
+  "path": "oracle",
+  "path_key": "oracle",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

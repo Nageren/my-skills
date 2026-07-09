@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7d997c44-396c-4c7f-ab96-ec11c454ef6d",
+  "path": "install-futu-opend",
+  "path_key": "install-futu-opend",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

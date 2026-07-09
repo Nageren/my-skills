@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "25d8dc3d-a867-4c04-90a7-a7cbd57542ec",
+  "path": "react-native-dev",
+  "path_key": "react-native-dev",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7bd02b48-491d-4a6b-b90f-c49e5b025490",
+  "path": "crash-expert-skill",
+  "path_key": "crash-expert-skill",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

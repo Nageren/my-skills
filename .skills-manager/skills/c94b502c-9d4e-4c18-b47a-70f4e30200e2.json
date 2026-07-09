@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "c94b502c-9d4e-4c18-b47a-70f4e30200e2",
+  "path": "web-deploy-github",
+  "path_key": "web-deploy-github",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

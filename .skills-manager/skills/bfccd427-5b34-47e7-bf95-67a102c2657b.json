@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "bfccd427-5b34-47e7-bf95-67a102c2657b",
+  "path": "llama-cpp",
+  "path_key": "llama-cpp",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

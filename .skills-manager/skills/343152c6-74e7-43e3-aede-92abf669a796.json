@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "343152c6-74e7-43e3-aede-92abf669a796",
+  "path": "study-planner",
+  "path_key": "study-planner",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "ca5691de-0e8f-4d22-a725-f1861332f612",
+  "path": "autoglm-generate-image-seedream",
+  "path_key": "autoglm-generate-image-seedream",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

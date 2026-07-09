@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0394d7ed-847d-4567-a8db-27ae982409fc",
+  "path": "cn-ecommerce-search",
+  "path_key": "cn-ecommerce-search",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

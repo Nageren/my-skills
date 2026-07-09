@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6f8b7207-c718-4d0f-992b-ada8fea6afd6",
+  "path": "blogwatcher-2",
+  "path_key": "blogwatcher-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

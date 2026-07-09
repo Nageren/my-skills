@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "593de808-265b-46a7-8e6c-be9f29204947",
+  "path": "knowledge-framework-builder",
+  "path_key": "knowledge-framework-builder",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

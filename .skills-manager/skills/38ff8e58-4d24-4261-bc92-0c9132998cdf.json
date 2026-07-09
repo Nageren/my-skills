@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "38ff8e58-4d24-4261-bc92-0c9132998cdf",
+  "path": "globepilot-ai-agent-2",
+  "path_key": "globepilot-ai-agent-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "90519661-0724-4d69-8b28-8d7d95bed7c9",
+  "path": "shader-dev",
+  "path_key": "shader-dev",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

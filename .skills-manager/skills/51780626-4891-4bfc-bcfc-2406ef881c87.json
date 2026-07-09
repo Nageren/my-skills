@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "51780626-4891-4bfc-bcfc-2406ef881c87",
+  "path": "academic-tutor",
+  "path_key": "academic-tutor",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

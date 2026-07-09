@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3c9693eb-429a-4474-b6f4-e8782d2eb8f5",
+  "path": "football-bayes",
+  "path_key": "football-bayes",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6364c819-f74d-43be-98c5-4b706b1024d1",
+  "path": "codex",
+  "path_key": "codex",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

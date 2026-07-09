@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "54dc0b2b-71e0-4416-90ef-4a145c733a6f",
+  "path": "didi-ride-skill",
+  "path_key": "didi-ride-skill",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

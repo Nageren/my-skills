@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a078a153-ea31-4e2b-9b8e-3df8feb14235",
+  "path": "yt-competitive-analysis",
+  "path_key": "yt-competitive-analysis",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

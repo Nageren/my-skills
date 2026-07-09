@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "bdf406c9-dfc6-41f1-b329-bfd370c2a6aa",
+  "path": "revenue-intelligence",
+  "path_key": "revenue-intelligence",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

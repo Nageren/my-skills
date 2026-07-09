@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "00d33c2d-ee96-406d-9b8a-f3c109105c37",
+  "path": "shippage",
+  "path_key": "shippage",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

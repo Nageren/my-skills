@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "4ddbc791-03bb-4ca9-a5dc-fadd382f7627",
+  "path": "task-alignment",
+  "path_key": "task-alignment",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

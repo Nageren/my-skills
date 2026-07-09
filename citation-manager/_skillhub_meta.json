@@ -1,0 +1,9 @@
+{
+  "name": "学术引用管理",
+  "slug": "citation-manager",
+  "version": "1.0.0",
+  "installedAt": 1779948791108,
+  "source": "marketplace",
+  "iconSource": "citation-manager",
+  "preinstalledTemplate": true
+}

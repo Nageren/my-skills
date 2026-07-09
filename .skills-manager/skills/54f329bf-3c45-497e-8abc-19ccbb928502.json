@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "54f329bf-3c45-497e-8abc-19ccbb928502",
+  "path": "autoglm-browser-agent",
+  "path_key": "autoglm-browser-agent",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

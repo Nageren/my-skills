@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "465b95ff-c656-4459-bce5-a46be4b00f0e",
+  "path": "openai-whisper",
+  "path_key": "openai-whisper",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

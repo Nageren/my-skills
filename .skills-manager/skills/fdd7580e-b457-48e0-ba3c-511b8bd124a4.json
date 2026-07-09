@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "fdd7580e-b457-48e0-ba3c-511b8bd124a4",
+  "path": "prototype",
+  "path_key": "prototype",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

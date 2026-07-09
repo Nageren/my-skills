@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "dbd802f6-a88f-429a-8038-afe711aab474",
+  "path": "lark-hermes-setup",
+  "path_key": "lark-hermes-setup",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

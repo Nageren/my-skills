@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0a853d09-7010-425c-852e-34e638d5d199",
+  "path": "open-lesson",
+  "path_key": "open-lesson",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "64f584c0-2797-4b53-b9e1-bbdc7231c6c2",
+  "path": "icode",
+  "path_key": "icode",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

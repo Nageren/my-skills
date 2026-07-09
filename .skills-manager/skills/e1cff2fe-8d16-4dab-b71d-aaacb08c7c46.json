@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e1cff2fe-8d16-4dab-b71d-aaacb08c7c46",
+  "path": "wechat-miniprogram",
+  "path_key": "wechat-miniprogram",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

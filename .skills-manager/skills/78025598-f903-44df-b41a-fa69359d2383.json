@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "78025598-f903-44df-b41a-fa69359d2383",
+  "path": "claude-api",
+  "path_key": "claude-api",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

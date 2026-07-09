@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6b109488-87ef-4479-8cc9-36c45b177773",
+  "path": "figma",
+  "path_key": "figma",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

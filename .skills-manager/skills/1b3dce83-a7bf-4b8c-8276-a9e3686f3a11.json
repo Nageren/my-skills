@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "1b3dce83-a7bf-4b8c-8276-a9e3686f3a11",
+  "path": "marketing-skills",
+  "path_key": "marketing-skills",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

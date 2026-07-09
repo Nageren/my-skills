@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "bb4c9c59-2fdd-4739-8a48-6827929f5e04",
+  "path": "github-auth",
+  "path_key": "github-auth",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

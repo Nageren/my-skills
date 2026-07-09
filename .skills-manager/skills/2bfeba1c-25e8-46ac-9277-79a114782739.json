@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2bfeba1c-25e8-46ac-9277-79a114782739",
+  "path": "autoglm-image-recognition",
+  "path_key": "autoglm-image-recognition",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

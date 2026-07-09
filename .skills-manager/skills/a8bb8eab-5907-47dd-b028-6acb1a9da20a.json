@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a8bb8eab-5907-47dd-b028-6acb1a9da20a",
+  "path": "weekly-report",
+  "path_key": "weekly-report",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

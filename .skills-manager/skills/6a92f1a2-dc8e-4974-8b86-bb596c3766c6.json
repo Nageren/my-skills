@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6a92f1a2-dc8e-4974-8b86-bb596c3766c6",
+  "path": "static-app",
+  "path_key": "static-app",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

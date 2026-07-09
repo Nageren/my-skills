@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "868baf14-cd6c-4658-b354-a5d6efccc29a",
+  "path": "content-ops",
+  "path_key": "content-ops",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

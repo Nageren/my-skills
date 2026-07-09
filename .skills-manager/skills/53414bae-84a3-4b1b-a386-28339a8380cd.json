@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "53414bae-84a3-4b1b-a386-28339a8380cd",
+  "path": "email-daily-summary",
+  "path_key": "email-daily-summary",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "281b348e-bec8-47c2-9104-a2e82d899b46",
+  "path": "tencent-survey-2",
+  "path_key": "tencent-survey-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

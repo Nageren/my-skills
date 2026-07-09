@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5923193b-03cc-40c2-ad9e-b3a9d99cfbe3",
+  "path": "ecommerce-copywriter",
+  "path_key": "ecommerce-copywriter",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

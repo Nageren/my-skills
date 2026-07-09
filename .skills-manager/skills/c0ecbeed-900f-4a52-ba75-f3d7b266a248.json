@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "c0ecbeed-900f-4a52-ba75-f3d7b266a248",
+  "path": "shopify-admin-api",
+  "path_key": "shopify-admin-api",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

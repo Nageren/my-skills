@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8caa0467-19f5-4a50-b570-abd56a69adce",
+  "path": "resume-assistant",
+  "path_key": "resume-assistant",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

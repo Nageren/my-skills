@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "db62145a-14e4-4b99-9036-716bc3ba13c4",
+  "path": "netlify-deploy",
+  "path_key": "netlify-deploy",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

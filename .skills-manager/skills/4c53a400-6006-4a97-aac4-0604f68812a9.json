@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "4c53a400-6006-4a97-aac4-0604f68812a9",
+  "path": "wechatpay-product-coupon",
+  "path_key": "wechatpay-product-coupon",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

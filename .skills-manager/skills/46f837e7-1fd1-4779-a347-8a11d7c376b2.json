@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "46f837e7-1fd1-4779-a347-8a11d7c376b2",
+  "path": "baidu-drive",
+  "path_key": "baidu-drive",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

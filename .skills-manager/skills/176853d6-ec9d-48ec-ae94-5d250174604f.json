@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "176853d6-ec9d-48ec-ae94-5d250174604f",
+  "path": "my-novel-writer",
+  "path_key": "my-novel-writer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

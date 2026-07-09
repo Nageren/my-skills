@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "98a09f4c-ba77-4130-ab5b-5cb9e2c6bfb0",
+  "path": "lark-slides",
+  "path_key": "lark-slides",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

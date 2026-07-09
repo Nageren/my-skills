@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "25bcbeb0-e62b-4cdc-9e60-9f3ff63d336b",
+  "path": "boss-skills",
+  "path_key": "boss-skills",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

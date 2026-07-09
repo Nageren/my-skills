@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "689b9cae-3a97-4b3a-973c-07be527896f8",
+  "path": "arxiv-reader",
+  "path_key": "arxiv-reader",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

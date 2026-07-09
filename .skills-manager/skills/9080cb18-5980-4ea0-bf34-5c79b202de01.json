@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9080cb18-5980-4ea0-bf34-5c79b202de01",
+  "path": "cli-anything-hub",
+  "path_key": "cli-anything-hub",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "31388e68-eeba-4103-9589-ee83969ae42d",
+  "path": "edgeone",
+  "path_key": "edgeone",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

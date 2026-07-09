@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "14cc5a12-072b-42c5-9af1-724127c3d1f3",
+  "path": "maishou",
+  "path_key": "maishou",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

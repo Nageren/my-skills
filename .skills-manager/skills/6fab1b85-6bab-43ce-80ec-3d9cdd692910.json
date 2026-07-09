@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6fab1b85-6bab-43ce-80ec-3d9cdd692910",
+  "path": "agentmail",
+  "path_key": "agentmail",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

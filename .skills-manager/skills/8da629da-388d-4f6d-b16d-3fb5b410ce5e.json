@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8da629da-388d-4f6d-b16d-3fb5b410ce5e",
+  "path": "lark-markdown-2",
+  "path_key": "lark-markdown-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

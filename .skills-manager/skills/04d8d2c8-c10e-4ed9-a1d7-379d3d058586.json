@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "04d8d2c8-c10e-4ed9-a1d7-379d3d058586",
+  "path": "task-implement",
+  "path_key": "task-implement",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

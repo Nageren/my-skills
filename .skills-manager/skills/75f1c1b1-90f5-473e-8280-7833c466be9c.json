@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "75f1c1b1-90f5-473e-8280-7833c466be9c",
+  "path": "yingmi-skill",
+  "path_key": "yingmi-skill",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

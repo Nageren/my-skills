@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8e57d6c1-62df-4458-8a69-9b247ff91c99",
+  "path": "feishu-cron-reminder",
+  "path_key": "feishu-cron-reminder",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "fa2d369b-3e06-4e6f-875a-6f5116ca9ef4",
+  "path": "tencent-yunzhi",
+  "path_key": "tencent-yunzhi",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

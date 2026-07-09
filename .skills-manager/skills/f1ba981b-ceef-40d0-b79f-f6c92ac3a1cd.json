@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f1ba981b-ceef-40d0-b79f-f6c92ac3a1cd",
+  "path": "autoglm-deepresearch",
+  "path_key": "autoglm-deepresearch",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

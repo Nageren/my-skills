@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "803b2af7-c660-4cec-89c4-d7215a2a7049",
+  "path": "playwright-browser-automation",
+  "path_key": "playwright-browser-automation",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

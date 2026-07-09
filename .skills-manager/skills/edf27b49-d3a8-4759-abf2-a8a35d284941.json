@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "edf27b49-d3a8-4759-abf2-a8a35d284941",
+  "path": "teachany",
+  "path_key": "teachany",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

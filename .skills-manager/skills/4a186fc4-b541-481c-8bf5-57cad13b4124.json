@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "4a186fc4-b541-481c-8bf5-57cad13b4124",
+  "path": "financial-suite",
+  "path_key": "financial-suite",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

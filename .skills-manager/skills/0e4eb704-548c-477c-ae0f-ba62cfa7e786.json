@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0e4eb704-548c-477c-ae0f-ba62cfa7e786",
+  "path": "autoclaw-im-cron",
+  "path_key": "autoclaw-im-cron",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

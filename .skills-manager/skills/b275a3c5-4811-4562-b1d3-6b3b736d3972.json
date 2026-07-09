@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b275a3c5-4811-4562-b1d3-6b3b736d3972",
+  "path": "tencent-meeting-skill",
+  "path_key": "tencent-meeting-skill",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

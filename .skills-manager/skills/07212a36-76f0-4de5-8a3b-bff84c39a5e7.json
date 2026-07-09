@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "07212a36-76f0-4de5-8a3b-bff84c39a5e7",
+  "path": "gif-sticker-maker",
+  "path_key": "gif-sticker-maker",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

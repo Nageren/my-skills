@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d83d8a53-04af-4ee7-8cbe-46d46d42b114",
+  "path": "caldav-calendar",
+  "path_key": "caldav-calendar",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

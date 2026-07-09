@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "92b8749f-87a3-4549-b72b-b04aef6d1da0",
+  "path": "xbrowser",
+  "path_key": "xbrowser",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

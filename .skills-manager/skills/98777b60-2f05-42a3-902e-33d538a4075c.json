@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "98777b60-2f05-42a3-902e-33d538a4075c",
+  "path": "minimax-xlsx",
+  "path_key": "minimax-xlsx",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

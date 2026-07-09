@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9f57a23a-e182-4b04-af0a-52230660ee00",
+  "path": "decision-mapping",
+  "path_key": "decision-mapping",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

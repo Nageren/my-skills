@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b91157f5-8350-40b9-adea-6e758b4eeb6b",
+  "path": "peekaboo",
+  "path_key": "peekaboo",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

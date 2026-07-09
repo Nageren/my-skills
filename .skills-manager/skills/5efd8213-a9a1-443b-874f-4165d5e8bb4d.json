@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5efd8213-a9a1-443b-874f-4165d5e8bb4d",
+  "path": "responsiveness-check",
+  "path_key": "responsiveness-check",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

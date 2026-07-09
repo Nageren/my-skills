@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f32441b2-81f0-44c8-bd15-61530ab4aef9",
+  "path": "github-pr-workflow",
+  "path_key": "github-pr-workflow",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

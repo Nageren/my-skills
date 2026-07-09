@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "58b5ef3f-9102-4231-a192-b38f1171c6bd",
+  "path": "feishu-chat-history",
+  "path_key": "feishu-chat-history",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

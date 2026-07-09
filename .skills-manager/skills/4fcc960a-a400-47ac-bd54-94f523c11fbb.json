@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "4fcc960a-a400-47ac-bd54-94f523c11fbb",
+  "path": "pretext",
+  "path_key": "pretext",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

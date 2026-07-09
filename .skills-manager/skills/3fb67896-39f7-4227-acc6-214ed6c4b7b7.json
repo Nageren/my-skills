@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3fb67896-39f7-4227-acc6-214ed6c4b7b7",
+  "path": "hermes-admin",
+  "path_key": "hermes-admin",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

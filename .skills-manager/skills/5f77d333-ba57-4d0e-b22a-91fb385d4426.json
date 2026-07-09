@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5f77d333-ba57-4d0e-b22a-91fb385d4426",
+  "path": "plan-tracker",
+  "path_key": "plan-tracker",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

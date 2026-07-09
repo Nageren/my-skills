@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "91a6f46c-b8ee-4f33-97b9-e0fdfb5e7e1c",
+  "path": "pdfkit-py",
+  "path_key": "pdfkit-py",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

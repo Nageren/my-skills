@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3c1faf29-3829-4257-ad55-efadbaf8cf89",
+  "path": "lark-workflow-meeting-summary",
+  "path_key": "lark-workflow-meeting-summary",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

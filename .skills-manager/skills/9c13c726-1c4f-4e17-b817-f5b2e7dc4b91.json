@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9c13c726-1c4f-4e17-b817-f5b2e7dc4b91",
+  "path": "team-ops",
+  "path_key": "team-ops",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

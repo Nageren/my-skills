@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e7668718-4974-41a0-8d85-8051bd265ed2",
+  "path": "novel-writing",
+  "path_key": "novel-writing",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

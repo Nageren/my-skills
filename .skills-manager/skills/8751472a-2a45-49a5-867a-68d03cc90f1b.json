@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8751472a-2a45-49a5-867a-68d03cc90f1b",
+  "path": "impeccable",
+  "path_key": "impeccable",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

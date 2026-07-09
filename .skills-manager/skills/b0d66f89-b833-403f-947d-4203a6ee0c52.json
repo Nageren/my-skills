@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b0d66f89-b833-403f-947d-4203a6ee0c52",
+  "path": "tencent-weather",
+  "path_key": "tencent-weather",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8580af25-3891-42ca-89e9-5c01c14d2aab",
+  "path": "alipay-authenticate-wallet",
+  "path_key": "alipay-authenticate-wallet",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

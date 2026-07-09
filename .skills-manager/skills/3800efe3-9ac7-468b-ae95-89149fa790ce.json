@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3800efe3-9ac7-468b-ae95-89149fa790ce",
+  "path": "vip-skill",
+  "path_key": "vip-skill",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

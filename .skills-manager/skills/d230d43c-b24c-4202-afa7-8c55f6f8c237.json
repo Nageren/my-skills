@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d230d43c-b24c-4202-afa7-8c55f6f8c237",
+  "path": "qmd",
+  "path_key": "qmd",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

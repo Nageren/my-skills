@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e477978e-d722-444e-9a1f-451eb420914d",
+  "path": "smart-page",
+  "path_key": "smart-page",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

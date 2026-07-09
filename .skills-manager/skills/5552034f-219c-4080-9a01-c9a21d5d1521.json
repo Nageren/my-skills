@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5552034f-219c-4080-9a01-c9a21d5d1521",
+  "path": "things-mac",
+  "path_key": "things-mac",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

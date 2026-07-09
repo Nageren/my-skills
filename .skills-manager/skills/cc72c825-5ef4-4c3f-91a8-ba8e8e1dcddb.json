@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "cc72c825-5ef4-4c3f-91a8-ba8e8e1dcddb",
+  "path": "material-organizer",
+  "path_key": "material-organizer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

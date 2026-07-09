@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "169c4af8-1f29-431f-938c-bde8ebaaa10f",
+  "path": "healthcheck",
+  "path_key": "healthcheck",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

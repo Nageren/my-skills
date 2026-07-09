@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6d017350-cef7-41c1-97fa-eea442df4104",
+  "path": "gmail",
+  "path_key": "gmail",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

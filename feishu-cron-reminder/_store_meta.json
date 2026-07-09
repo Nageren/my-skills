@@ -1,0 +1,9 @@
+{
+  "skillId": "feishu-cron-reminder-local",
+  "skillKey": "feishu-cron-reminder",
+  "version": "1.0.0",
+  "installedAt": 1782540836818,
+  "dirName": "feishu-cron-reminder",
+  "source": "local",
+  "installedAtSource": "runtime"
+}

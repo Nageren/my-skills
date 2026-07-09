@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "884240e1-0bea-43b9-abc3-ad8140ca47ea",
+  "path": "promo-creator-skills",
+  "path_key": "promo-creator-skills",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

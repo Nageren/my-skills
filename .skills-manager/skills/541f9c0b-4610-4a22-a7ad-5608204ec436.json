@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "541f9c0b-4610-4a22-a7ad-5608204ec436",
+  "path": "autoglm-websearch",
+  "path_key": "autoglm-websearch",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

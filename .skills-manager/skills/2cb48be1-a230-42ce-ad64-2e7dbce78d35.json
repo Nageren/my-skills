@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2cb48be1-a230-42ce-ad64-2e7dbce78d35",
+  "path": "jinshuju",
+  "path_key": "jinshuju",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

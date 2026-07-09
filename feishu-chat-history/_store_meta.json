@@ -1,0 +1,9 @@
+{
+  "skillId": "2a2528be-24d6-4742-8c07-2a90b1137e4f",
+  "skillKey": "feishu-chat-history",
+  "version": "1.0.0",
+  "installedAt": 1782540836818,
+  "dirName": "feishu-chat-history",
+  "source": "store",
+  "installedAtSource": "runtime"
+}

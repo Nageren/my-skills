@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "acd1ecf3-4d78-4740-8051-b0a6fd5061db",
+  "path": "teach",
+  "path_key": "teach",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

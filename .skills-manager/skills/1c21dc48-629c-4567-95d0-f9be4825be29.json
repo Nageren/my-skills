@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "1c21dc48-629c-4567-95d0-f9be4825be29",
+  "path": "autoclaw-billing",
+  "path_key": "autoclaw-billing",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "11f7cfe8-63b0-4d15-b53d-3f4e18019138",
+  "path": "paper-quick-reader",
+  "path_key": "paper-quick-reader",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

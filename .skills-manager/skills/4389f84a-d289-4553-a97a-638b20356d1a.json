@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "4389f84a-d289-4553-a97a-638b20356d1a",
+  "path": "hermes-evolution",
+  "path_key": "hermes-evolution",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

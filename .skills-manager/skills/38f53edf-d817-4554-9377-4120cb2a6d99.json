@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "38f53edf-d817-4554-9377-4120cb2a6d99",
+  "path": "novel",
+  "path_key": "novel",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

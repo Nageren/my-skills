@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "58e95b48-b61e-4b37-8c66-231255e1ef34",
+  "path": "prompt-engineering-expert",
+  "path_key": "prompt-engineering-expert",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

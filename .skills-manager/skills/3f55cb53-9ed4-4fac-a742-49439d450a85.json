@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3f55cb53-9ed4-4fac-a742-49439d450a85",
+  "path": "habit-tracker",
+  "path_key": "habit-tracker",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

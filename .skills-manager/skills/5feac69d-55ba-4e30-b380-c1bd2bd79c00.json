@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5feac69d-55ba-4e30-b380-c1bd2bd79c00",
+  "path": "browser-cash",
+  "path_key": "browser-cash",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "66e11ba5-7dd8-445a-b223-5d9d04d223cd",
+  "path": "academic-translation",
+  "path_key": "academic-translation",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

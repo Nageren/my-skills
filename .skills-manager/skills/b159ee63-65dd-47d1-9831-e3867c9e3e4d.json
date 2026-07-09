@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b159ee63-65dd-47d1-9831-e3867c9e3e4d",
+  "path": "fadada-document-sign",
+  "path_key": "fadada-document-sign",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

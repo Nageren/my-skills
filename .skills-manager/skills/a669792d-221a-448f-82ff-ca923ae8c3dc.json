@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a669792d-221a-448f-82ff-ca923ae8c3dc",
+  "path": "internal-comms",
+  "path_key": "internal-comms",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

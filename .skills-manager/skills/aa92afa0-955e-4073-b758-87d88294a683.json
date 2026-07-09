@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "aa92afa0-955e-4073-b758-87d88294a683",
+  "path": "web-performance-audit",
+  "path_key": "web-performance-audit",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

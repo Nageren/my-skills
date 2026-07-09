@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e1b2a5e4-3664-429a-81dc-3f4049b6a207",
+  "path": "meituan-huisheng-coupon",
+  "path_key": "meituan-huisheng-coupon",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

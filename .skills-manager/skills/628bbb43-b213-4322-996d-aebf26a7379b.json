@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "628bbb43-b213-4322-996d-aebf26a7379b",
+  "path": "arxiv-watcher",
+  "path_key": "arxiv-watcher",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

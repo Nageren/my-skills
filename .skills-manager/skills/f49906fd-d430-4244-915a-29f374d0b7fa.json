@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f49906fd-d430-4244-915a-29f374d0b7fa",
+  "path": "admapix",
+  "path_key": "admapix",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

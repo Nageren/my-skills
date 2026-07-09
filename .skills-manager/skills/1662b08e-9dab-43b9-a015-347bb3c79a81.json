@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "1662b08e-9dab-43b9-a015-347bb3c79a81",
+  "path": "english-intensive-reader",
+  "path_key": "english-intensive-reader",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

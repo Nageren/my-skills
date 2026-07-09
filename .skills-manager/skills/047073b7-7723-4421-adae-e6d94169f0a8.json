@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "047073b7-7723-4421-adae-e6d94169f0a8",
+  "path": "github-trending-cn",
+  "path_key": "github-trending-cn",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

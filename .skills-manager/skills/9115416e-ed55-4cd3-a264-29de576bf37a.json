@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9115416e-ed55-4cd3-a264-29de576bf37a",
+  "path": "github-pages-auto-deploy",
+  "path_key": "github-pages-auto-deploy",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

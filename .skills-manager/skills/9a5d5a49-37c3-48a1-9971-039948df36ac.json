@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9a5d5a49-37c3-48a1-9971-039948df36ac",
+  "path": "charity-finance-assistant",
+  "path_key": "charity-finance-assistant",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

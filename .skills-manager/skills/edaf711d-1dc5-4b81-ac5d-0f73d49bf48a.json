@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "edaf711d-1dc5-4b81-ac5d-0f73d49bf48a",
+  "path": "openclaw-assets-to-workbuddy",
+  "path_key": "openclaw-assets-to-workbuddy",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

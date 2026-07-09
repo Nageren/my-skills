@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5d8fef1b-6973-4b11-86d2-caf28b0b21d1",
+  "path": "fbs_bookwriter",
+  "path_key": "fbs_bookwriter",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

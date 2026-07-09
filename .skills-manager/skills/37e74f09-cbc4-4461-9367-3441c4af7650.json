@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "37e74f09-cbc4-4461-9367-3441c4af7650",
+  "path": "edgeone-pages-deploy",
+  "path_key": "edgeone-pages-deploy",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8ec174b0-7b42-478c-83b9-63bfc30170e7",
+  "path": "gif-search",
+  "path_key": "gif-search",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

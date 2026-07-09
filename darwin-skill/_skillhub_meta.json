@@ -1,0 +1,9 @@
+{
+  "name": "darwin-skill",
+  "slug": "darwin-skill",
+  "version": "1.0.0",
+  "installedAt": 1779948791104,
+  "source": "marketplace",
+  "iconSource": "darwin-skill",
+  "preinstalledTemplate": true
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "91c35014-fada-41ec-a244-c3df50327c9f",
+  "path": "ozon-1688-uploader",
+  "path_key": "ozon-1688-uploader",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "19552d98-a4bc-4f8b-b751-12038b436666",
+  "path": "imap-smtp-email",
+  "path_key": "imap-smtp-email",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "skillId": "autoclaw-im-cron-local",
+  "skillKey": "autoclaw-im-cron",
+  "version": "1.0.0",
+  "installedAt": 1782540836797,
+  "dirName": "autoclaw-im-cron",
+  "source": "local",
+  "installedAtSource": "runtime"
+}

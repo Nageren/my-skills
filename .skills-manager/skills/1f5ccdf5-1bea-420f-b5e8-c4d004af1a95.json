@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "1f5ccdf5-1bea-420f-b5e8-c4d004af1a95",
+  "path": "clawbrowser",
+  "path_key": "clawbrowser",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

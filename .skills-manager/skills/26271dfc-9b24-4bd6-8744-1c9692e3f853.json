@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "26271dfc-9b24-4bd6-8744-1c9692e3f853",
+  "path": "kdocs",
+  "path_key": "kdocs",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

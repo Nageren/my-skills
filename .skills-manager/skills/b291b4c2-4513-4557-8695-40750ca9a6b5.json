@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b291b4c2-4513-4557-8695-40750ca9a6b5",
+  "path": "ios-application-dev",
+  "path_key": "ios-application-dev",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

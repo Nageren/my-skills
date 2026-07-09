@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "33111841-a9b0-4beb-bf67-8f3dbac3180f",
+  "path": "github-ai-trends",
+  "path_key": "github-ai-trends",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9d3923fc-3930-4fae-9b65-b382c150a2d8",
+  "path": "lark-sheets-2",
+  "path_key": "lark-sheets-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

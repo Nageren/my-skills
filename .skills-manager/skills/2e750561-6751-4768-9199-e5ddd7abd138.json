@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2e750561-6751-4768-9199-e5ddd7abd138",
+  "path": "openai-image-gen",
+  "path_key": "openai-image-gen",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

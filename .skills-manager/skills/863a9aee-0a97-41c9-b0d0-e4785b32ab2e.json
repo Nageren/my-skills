@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "863a9aee-0a97-41c9-b0d0-e4785b32ab2e",
+  "path": "capability-evolver",
+  "path_key": "capability-evolver",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

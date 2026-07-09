@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "76672f3d-d359-4620-ace3-97b76fe4775b",
+  "path": "jiaozhen-factcheck",
+  "path_key": "jiaozhen-factcheck",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

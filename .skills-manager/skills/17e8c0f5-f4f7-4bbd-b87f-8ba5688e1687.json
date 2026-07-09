@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "17e8c0f5-f4f7-4bbd-b87f-8ba5688e1687",
+  "path": "yourself-skill",
+  "path_key": "yourself-skill",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

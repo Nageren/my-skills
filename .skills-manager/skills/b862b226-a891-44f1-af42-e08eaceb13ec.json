@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b862b226-a891-44f1-af42-e08eaceb13ec",
+  "path": "audiocraft-audio-generation",
+  "path_key": "audiocraft-audio-generation",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

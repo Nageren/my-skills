@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "348d0df5-b2ce-4310-9edb-6ce1fc1c3ce9",
+  "path": "landing-page-generator",
+  "path_key": "landing-page-generator",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

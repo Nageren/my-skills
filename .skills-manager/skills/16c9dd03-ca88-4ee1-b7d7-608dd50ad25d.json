@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "16c9dd03-ca88-4ee1-b7d7-608dd50ad25d",
+  "path": "podcast-ops",
+  "path_key": "podcast-ops",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

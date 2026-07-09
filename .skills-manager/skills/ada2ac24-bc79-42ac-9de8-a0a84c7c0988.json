@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "ada2ac24-bc79-42ac-9de8-a0a84c7c0988",
+  "path": "lark-calendar",
+  "path_key": "lark-calendar",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

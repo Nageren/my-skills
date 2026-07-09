@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "bf372c08-51b0-4231-a8ef-3a54ab5f3b46",
+  "path": "qclaw-cron-skill",
+  "path_key": "qclaw-cron-skill",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

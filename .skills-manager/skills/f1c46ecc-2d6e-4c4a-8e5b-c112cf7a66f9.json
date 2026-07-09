@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f1c46ecc-2d6e-4c4a-8e5b-c112cf7a66f9",
+  "path": "macro-monitor",
+  "path_key": "macro-monitor",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "205151e6-0b2e-4fe3-aa8f-de329871794a",
+  "path": "deck-generator",
+  "path_key": "deck-generator",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

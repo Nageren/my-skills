@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "64746e6f-6ade-4746-8b97-788b62644982",
+  "path": "outbound-engine",
+  "path_key": "outbound-engine",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

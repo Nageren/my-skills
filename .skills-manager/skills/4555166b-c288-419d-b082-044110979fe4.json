@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "4555166b-c288-419d-b082-044110979fe4",
+  "path": "stealth-browser",
+  "path_key": "stealth-browser",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

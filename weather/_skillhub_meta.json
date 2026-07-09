@@ -1,0 +1,9 @@
+{
+  "name": "天气查询",
+  "slug": "weather",
+  "version": "1.0.0",
+  "installedAt": 1779948791109,
+  "source": "marketplace",
+  "iconSource": "weather",
+  "preinstalledTemplate": true
+}

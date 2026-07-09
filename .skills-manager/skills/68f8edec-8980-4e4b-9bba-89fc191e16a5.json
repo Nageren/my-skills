@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "68f8edec-8980-4e4b-9bba-89fc191e16a5",
+  "path": "sales-playbook",
+  "path_key": "sales-playbook",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "43c2fd1b-9f39-4fe7-92bd-ea5ebb3ffd0d",
+  "path": "tapd-openapi",
+  "path_key": "tapd-openapi",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

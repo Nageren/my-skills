@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a55d6a6b-78ba-401a-94ff-638e20336789",
+  "path": "growth-engine",
+  "path_key": "growth-engine",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

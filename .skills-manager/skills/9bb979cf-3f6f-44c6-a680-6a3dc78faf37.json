@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9bb979cf-3f6f-44c6-a680-6a3dc78faf37",
+  "path": "andonq",
+  "path_key": "andonq",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

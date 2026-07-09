@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6ecbe163-45e3-47fc-b14c-06013b999e05",
+  "path": "tencent-yuanbao-standard-search",
+  "path_key": "tencent-yuanbao-standard-search",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

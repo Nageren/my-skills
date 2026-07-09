@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a2e87c0e-eb13-467c-aad4-e7c56e79b800",
+  "path": "qcc-company",
+  "path_key": "qcc-company",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

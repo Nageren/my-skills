@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "cf5f3c41-e2f0-4087-91d4-a8fabeb6ab9b",
+  "path": "youtube-content",
+  "path_key": "youtube-content",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

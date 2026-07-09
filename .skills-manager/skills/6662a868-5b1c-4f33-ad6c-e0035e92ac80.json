@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6662a868-5b1c-4f33-ad6c-e0035e92ac80",
+  "path": "finance-ops",
+  "path_key": "finance-ops",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

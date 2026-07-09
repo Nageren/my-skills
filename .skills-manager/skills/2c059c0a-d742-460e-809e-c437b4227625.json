@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2c059c0a-d742-460e-809e-c437b4227625",
+  "path": "english-exam-writing-reviewer",
+  "path_key": "english-exam-writing-reviewer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

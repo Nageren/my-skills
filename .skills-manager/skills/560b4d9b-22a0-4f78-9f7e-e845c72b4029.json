@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "560b4d9b-22a0-4f78-9f7e-e845c72b4029",
+  "path": "cos-vectors",
+  "path_key": "cos-vectors",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

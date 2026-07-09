@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9c91c1ce-cfc3-4170-a2f5-bda271b70b3c",
+  "path": "product-showcase-site",
+  "path_key": "product-showcase-site",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

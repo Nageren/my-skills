@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b950c49e-74ae-4c8f-9a79-9e6685c0c8d7",
+  "path": "migraq",
+  "path_key": "migraq",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

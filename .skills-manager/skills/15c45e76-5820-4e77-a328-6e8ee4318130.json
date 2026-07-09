@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "15c45e76-5820-4e77-a328-6e8ee4318130",
+  "path": "tencent-campus-recruit",
+  "path_key": "tencent-campus-recruit",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "930a70c2-15b4-45a2-b762-c08e9ac60888",
+  "path": "remotion",
+  "path_key": "remotion",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

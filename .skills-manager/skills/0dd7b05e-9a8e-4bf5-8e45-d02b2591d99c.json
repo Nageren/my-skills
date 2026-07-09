@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0dd7b05e-9a8e-4bf5-8e45-d02b2591d99c",
+  "path": "legal-logic-analysis",
+  "path_key": "legal-logic-analysis",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

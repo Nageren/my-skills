@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "cf0567c4-60cf-4a72-a450-9a745546df94",
+  "path": "writing-shape",
+  "path_key": "writing-shape",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

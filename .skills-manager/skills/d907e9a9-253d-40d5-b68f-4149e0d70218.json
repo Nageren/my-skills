@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d907e9a9-253d-40d5-b68f-4149e0d70218",
+  "path": "wechat-publisher",
+  "path_key": "wechat-publisher",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

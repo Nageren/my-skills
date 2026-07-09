@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f9b96a10-9d5d-4ad3-b6bf-e07e7ec3e5d1",
+  "path": "conversion-ops",
+  "path_key": "conversion-ops",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "c17ce792-72dd-4083-8850-279d0f9e2413",
+  "path": "open-novel-writing",
+  "path_key": "open-novel-writing",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

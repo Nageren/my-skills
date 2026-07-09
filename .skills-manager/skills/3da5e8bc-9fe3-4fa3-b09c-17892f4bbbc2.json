@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3da5e8bc-9fe3-4fa3-b09c-17892f4bbbc2",
+  "path": "tongdaxin-mcp",
+  "path_key": "tongdaxin-mcp",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

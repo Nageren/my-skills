@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2b33f12a-4cde-4155-ac0e-fce614e42fca",
+  "path": "lark-okr-2",
+  "path_key": "lark-okr-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

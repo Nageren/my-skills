@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7292148b-b133-4ca2-b871-27117cae526a",
+  "path": "md-to-pdf-cjk",
+  "path_key": "md-to-pdf-cjk",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

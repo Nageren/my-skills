@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d00f40e6-7b8a-4e28-9271-e18395cea479",
+  "path": "feishu-integration",
+  "path_key": "feishu-integration",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

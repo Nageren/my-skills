@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "4064c110-ef00-4b09-a84c-f28925caa833",
+  "path": "jenkins-quick-deploy",
+  "path_key": "jenkins-quick-deploy",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f546718a-01dc-4b53-888b-bdc0c57755a8",
+  "path": "tencent-musician-skills-2",
+  "path_key": "tencent-musician-skills-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

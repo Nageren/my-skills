@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a56ac10b-78b1-4dba-af09-27028a258f85",
+  "path": "tencentcloud-cls",
+  "path_key": "tencentcloud-cls",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

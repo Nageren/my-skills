@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "67e825f9-bc6d-472e-b291-8742fbe70035",
+  "path": "infographic-maker",
+  "path_key": "infographic-maker",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

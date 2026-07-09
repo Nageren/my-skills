@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5a13283f-b8d7-4045-8251-669188767f2b",
+  "path": "earnings-tracker",
+  "path_key": "earnings-tracker",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

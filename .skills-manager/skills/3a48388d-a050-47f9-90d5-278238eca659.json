@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3a48388d-a050-47f9-90d5-278238eca659",
+  "path": "ecomseer",
+  "path_key": "ecomseer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

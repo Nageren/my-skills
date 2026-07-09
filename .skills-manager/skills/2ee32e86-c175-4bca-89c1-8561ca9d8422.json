@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2ee32e86-c175-4bca-89c1-8561ca9d8422",
+  "path": "neodata-financial-search",
+  "path_key": "neodata-financial-search",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

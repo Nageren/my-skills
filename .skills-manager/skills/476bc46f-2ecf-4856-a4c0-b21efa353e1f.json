@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "476bc46f-2ecf-4856-a4c0-b21efa353e1f",
+  "path": "Memory",
+  "path_key": "memory",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "89b6441b-728c-4968-9582-ea8beaefaa54",
+  "path": "sales-pipeline",
+  "path_key": "sales-pipeline",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

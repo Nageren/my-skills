@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "54d76256-55b8-4bf3-a5de-0bb60714d2f6",
+  "path": "tencentmap-lbs-skill",
+  "path_key": "tencentmap-lbs-skill",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "85a1e5fd-2abf-4c4a-870f-fb34d979f521",
+  "path": "the-entrepreneurship-handbook",
+  "path_key": "the-entrepreneurship-handbook",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

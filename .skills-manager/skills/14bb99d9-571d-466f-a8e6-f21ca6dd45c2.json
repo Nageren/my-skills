@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "14bb99d9-571d-466f-a8e6-f21ca6dd45c2",
+  "path": "agent-mbti",
+  "path_key": "agent-mbti",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

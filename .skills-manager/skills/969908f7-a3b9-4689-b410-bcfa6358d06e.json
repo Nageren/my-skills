@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "969908f7-a3b9-4689-b410-bcfa6358d06e",
+  "path": "khazix-writer",
+  "path_key": "khazix-writer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

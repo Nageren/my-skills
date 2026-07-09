@@ -1,0 +1,68 @@
+{
+  "created_at" : "2026-06-26T08:23:14Z",
+  "entries" : 
+  [
+    {
+      "hash" : "662fe95346dd63157a30e0384c7962f2d24dd02677a3a98a21eb54ebda7277a7",
+      "path" : "references/402-payment.md",
+      "signed" : true,
+      "size" : 8852
+    },
+    {
+      "hash" : "0e0dbc5d8bc4a5f330111bc246932a8e8371cf910e8fe760234f5118d376e3cc",
+      "path" : "references/cli-setup.md",
+      "signed" : true,
+      "size" : 1626
+    },
+    {
+      "hash" : "ca3e9eea16421c8c105c1ba828932f27c4d3db3244f2028739537dd73f84b3d6",
+      "path" : "references/cashier-payment.md",
+      "signed" : true,
+      "size" : 6813
+    },
+    {
+      "hash" : "b558618a9b7880748ea023a5bbbe37180061d9383d27bba15dab60c389f3bd49",
+      "path" : "references/image-output.md",
+      "signed" : true,
+      "size" : 4471
+    },
+    {
+      "hash" : "133fe747986d35f22878780587b1f48d5352725c108d3630ad78a3315fc16297",
+      "path" : "references/output-rules.md",
+      "signed" : true,
+      "size" : 3545
+    },
+    {
+      "hash" : "9895d228c9c6f96b72ddda5716abda5a17211b906023c10d22f61d6ddce79b09",
+      "path" : "references/env-vars.md",
+      "signed" : true,
+      "size" : 1317
+    },
+    {
+      "hash" : "a1591424386c5e74bd6f5c6f9839f02651338eaa0c1dae00f52539cc72ff5345",
+      "path" : "references/feedback.md",
+      "signed" : true,
+      "size" : 1728
+    },
+    {
+      "hash" : "946558698ab0e7baba4bbf2c6f7c4a44cda93512ea251df6b9c5d65e84bf1f0f",
+      "path" : "references/security.md",
+      "signed" : true,
+      "size" : 2590
+    },
+    {
+      "hash" : "7c31c06614490758531c5a63a4b91312e165629b1d16caa6ea0eeccbf4cbb7bf",
+      "path" : "SKILL.md",
+      "signed" : true,
+      "size" : 14608
+    }
+  ],
+  "manifest_hash" : "3f399bac8b17210e7f7d462e0d2c25f78ad3f7fff4d91107e8fa58e540c14119",
+  "skill_description" : "|",
+  "skill_id" : "alipay-payment-skill",
+  "skill_name" : "alipay-payment-skill",
+  "skill_version" : "",
+  "total_files" : 9,
+  "total_size" : 45550,
+  "version" : "1.0"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9ecbced4-2798-4f5d-80af-68b406b7f920",
+  "path": "autoresearch",
+  "path_key": "autoresearch",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

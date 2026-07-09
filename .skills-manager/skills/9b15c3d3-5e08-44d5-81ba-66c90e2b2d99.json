@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9b15c3d3-5e08-44d5-81ba-66c90e2b2d99",
+  "path": "education",
+  "path_key": "education",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

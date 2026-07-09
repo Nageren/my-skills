@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6e97d9a1-3dab-49cc-860d-d2249e01c15a",
+  "path": "futuapi",
+  "path_key": "futuapi",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

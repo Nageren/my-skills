@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6bcb1791-6c9b-4de6-80f6-a372723fac67",
+  "path": "baidu-ai-map",
+  "path_key": "baidu-ai-map",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f6a49207-e603-4a95-8792-97e0c122fae5",
+  "path": "x-longform-post",
+  "path_key": "x-longform-post",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

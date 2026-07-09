@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2c904665-4387-43a8-a1cc-cb456a041b54",
+  "path": "porteden-email",
+  "path_key": "porteden-email",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

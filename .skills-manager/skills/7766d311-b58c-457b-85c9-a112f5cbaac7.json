@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7766d311-b58c-457b-85c9-a112f5cbaac7",
+  "path": "flight-tracker",
+  "path_key": "flight-tracker",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

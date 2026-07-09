@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d331230b-ea63-4b0e-b266-0a889e4a16f8",
+  "path": "charity-writing-assistant",
+  "path_key": "charity-writing-assistant",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

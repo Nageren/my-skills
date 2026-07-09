@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "9657ba71-a59d-463d-bc58-e16219180106",
+  "path": "wechatpay-basic-payment",
+  "path_key": "wechatpay-basic-payment",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

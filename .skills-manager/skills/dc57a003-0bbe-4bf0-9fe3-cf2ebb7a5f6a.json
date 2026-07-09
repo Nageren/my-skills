@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "dc57a003-0bbe-4bf0-9fe3-cf2ebb7a5f6a",
+  "path": "goal-tracker",
+  "path_key": "goal-tracker",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

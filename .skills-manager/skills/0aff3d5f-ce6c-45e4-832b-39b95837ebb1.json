@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0aff3d5f-ce6c-45e4-832b-39b95837ebb1",
+  "path": "tencentcloud-cos",
+  "path_key": "tencentcloud-cos",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

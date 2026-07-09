@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "72b15179-f030-44e8-88ff-66e4916a2ce1",
+  "path": "sino-drug-instructions-search",
+  "path_key": "sino-drug-instructions-search",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

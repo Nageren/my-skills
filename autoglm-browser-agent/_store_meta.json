@@ -1,0 +1,9 @@
+{
+  "skillId": "0775a2e3-b876-4d47-b7f1-c53ea1036448",
+  "skillKey": "autoglm-browser-agent",
+  "version": "1.1.8",
+  "installedAt": 1782540836799,
+  "dirName": "autoglm-browser-agent-mac",
+  "source": "store",
+  "installedAtSource": "runtime"
+}

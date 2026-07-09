@@ -1,0 +1,9 @@
+{
+  "name": "Cloudflare",
+  "slug": "cloudflare",
+  "version": "1.0.0",
+  "installedAt": 1779948791116,
+  "source": "marketplace",
+  "iconSource": "cloudflare",
+  "preinstalledTemplate": true
+}

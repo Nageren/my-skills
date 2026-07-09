@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e60aeca8-3cfe-40eb-be50-21740a983592",
+  "path": "tencent-meeting-mcp",
+  "path_key": "tencent-meeting-mcp",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

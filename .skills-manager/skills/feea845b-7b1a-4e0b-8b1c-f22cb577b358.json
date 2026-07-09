@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "feea845b-7b1a-4e0b-8b1c-f22cb577b358",
+  "path": "qclaw-env",
+  "path_key": "qclaw-env",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

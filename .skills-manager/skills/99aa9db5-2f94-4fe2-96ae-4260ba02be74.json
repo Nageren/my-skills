@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "99aa9db5-2f94-4fe2-96ae-4260ba02be74",
+  "path": "website-builder",
+  "path_key": "website-builder",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

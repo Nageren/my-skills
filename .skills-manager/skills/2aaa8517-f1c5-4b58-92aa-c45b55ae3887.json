@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2aaa8517-f1c5-4b58-92aa-c45b55ae3887",
+  "path": "content-repurposer",
+  "path_key": "content-repurposer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}
