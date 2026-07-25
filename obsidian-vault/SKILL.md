@@ -7,21 +7,37 @@ description: Search, create, and manage notes in the Obsidian vault with wikilin
 
 ## Vault location
 
-`/mnt/d/Obsidian Vault/AI Research/`
+`/Users/marvin/IdeaProjects/knowledge/knowledge/`
 
-Mostly flat at root level.
+Structured with folders following OpenClaw Wiki conventions.
+
+## Folder conventions
+
+| Folder | Purpose |
+|--------|---------|
+| `sources/` | Raw materials — articles, docs, transcripts. Add `<!-- openclaw:wiki:raw-source -->` marker. |
+| `entities/` | People, orgs, tools, projects — concrete entities. |
+| `concepts/` | Abstract concepts, patterns, principles, terminology. |
+| `syntheses/` | Cross-source, cross-entity comprehensive analysis. |
+| `reports/` | OpenClaw auto-generated reports (claim health, contradictions, etc.). |
+| `wiki/` | Wiki namespace (comparisons, concepts, domains, etc.) with `_index.md` per section. |
+| `_templates/` | Obsidian note templates per page type. |
+| `_attachments/` | Images, PDFs, binary resources. |
+| `inbox.md` | Staging area — raw ideas, to be sorted later. |
 
 ## Naming conventions
 
-- **Index notes**: aggregate related topics (e.g., `Ralph Wiggum Index.md`, `Skills Index.md`, `RAG Index.md`)
-- **Title case** for all note names
-- No folders for organization - use links and index notes instead
+- **kebab-case** for filenames in syntheses/ (e.g., `code-knowledge-graph-tools-comparison.md`)
+- **Title case** for human-facing titles in frontmatter
+- Use OpenClaw-style frontmatter: `pageType`, `id`, `title`, `status`, `tags`, `updatedAt`, `confidence`
+- Obsidian callouts: `> [!important]`, `> [!tip]`, `> [!abstract]`, `> [!warning]`, `> [!danger]`, `> [!quote]`, `> [!info]`
+- Managed blocks: `<!-- openclaw:...:start -->` to `<!-- openclaw:...:end -->` — do NOT edit inside these markers
 
 ## Linking
 
-- Use Obsidian `[[wikilinks]]` syntax: `[[Note Title]]`
-- Notes link to dependencies/related notes at the bottom
-- Index notes are just lists of `[[wikilinks]]`
+- Use Obsidian `[[wikilinks]]` syntax: `[[folder/note-name|Display Title]]`
+- Notes link to related pages at the bottom under `## 相关页面`
+- Index notes (`_index.md` or `index.md`) aggregate related topics with wikilinks
 
 ## Workflows
 
@@ -29,31 +45,33 @@ Mostly flat at root level.
 
 ```bash
 # Search by filename
-find "/mnt/d/Obsidian Vault/AI Research/" -name "*.md" | grep -i "keyword"
+find "/Users/marvin/IdeaProjects/knowledge/knowledge/" -name "*.md" | grep -i "keyword"
 
 # Search by content
-grep -rl "keyword" "/mnt/d/Obsidian Vault/AI Research/" --include="*.md"
+grep -rl "keyword" "/Users/marvin/IdeaProjects/knowledge/knowledge/" --include="*.md"
 ```
 
 Or use Grep/Glob tools directly on the vault path.
 
 ### Create a new note
 
-1. Use **Title Case** for filename
-2. Write content as a unit of learning (per vault rules)
-3. Add `[[wikilinks]]` to related notes at the bottom
-4. If part of a numbered sequence, use the hierarchical numbering scheme
+1. Choose correct folder (`syntheses/`, `entities/`, `concepts/`, `sources/`)
+2. Use kebab-case filename (e.g., `my-analysis-topic.md`)
+3. Add OpenClaw-style frontmatter (pageType, id, title, status, tags)
+4. Write content with Obsidian callouts
+5. Add `[[wikilinks]]` to related pages under `## 相关页面`
+6. Update the relevant `index.md` or `_index.md`
 
 ### Find related notes
 
 Search for `[[Note Title]]` across the vault to find backlinks:
 
 ```bash
-grep -rl "\\[\\[Note Title\\]\\]" "/mnt/d/Obsidian Vault/AI Research/"
+grep -rl "\\[\\[note-name\\]\\]" "/Users/marvin/IdeaProjects/knowledge/knowledge/"
 ```
 
 ### Find index notes
 
 ```bash
-find "/mnt/d/Obsidian Vault/AI Research/" -name "*Index*"
+find "/Users/marvin/IdeaProjects/knowledge/knowledge/" -name "*index*" -o -name "*_index*"
 ```
