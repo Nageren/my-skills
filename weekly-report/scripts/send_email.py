@@ -31,10 +31,15 @@ def send(to: str, subject: str, body_file: str) -> None:
     msg = MIMEText(body, 'plain', 'utf-8')
     msg['Subject'] = subject
     msg['From'] = f'马文磊 <{SMTP_USER}>'
-    msg['To'] = to
+    # 支持逗号分隔的多收件人
+    if ',' in to:
+        msg['To'] = ', '.join(a.strip() for a in to.split(','))
+    else:
+        msg['To'] = to
 
     with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as s:
         s.login(SMTP_USER, pwd)
+        # send_message 会自动处理多收件人
         s.send_message(msg)
 
 

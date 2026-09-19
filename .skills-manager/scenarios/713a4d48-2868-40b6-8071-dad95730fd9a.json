@@ -3,6 +3,6 @@
   "scenario_id": "713a4d48-2868-40b6-8071-dad95730fd9a",
   "name": "Default",
   "description": "Default startup scenario",
-  "icon": null,
+  "icon": "rocket",
   "sort_order": 0
 }
