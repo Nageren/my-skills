@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7f950726-ac04-44e4-823a-9392aa5ef2b2",
+  "path": "blocked-page-recovery",
+  "path_key": "blocked-page-recovery",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "11e07965-3320-49e4-8ce4-caeb1a1ef3c7",
+  "path": "apple-reminders-3",
+  "path_key": "apple-reminders-3",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Apple提醒事项",
+  "installedAt": 1779082789778,
+  "source": "marketplace",
+  "iconSource": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/apple-reminders.png",
+  "version": "1.0.0",
+  "skillId": "skill_2053081352079101952",
+  "iconLocalPath": "/Users/marvin/.workbuddy/skills/skill_2053081352079101952/_icon.png",
+  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/apple-reminders.png"
+}
