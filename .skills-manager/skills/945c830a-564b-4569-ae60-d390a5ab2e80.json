@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "945c830a-564b-4569-ae60-d390a5ab2e80",
+  "path": "investor-materials",
+  "path_key": "investor-materials",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

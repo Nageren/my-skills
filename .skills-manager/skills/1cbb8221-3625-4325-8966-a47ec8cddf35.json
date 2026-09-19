@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "1cbb8221-3625-4325-8966-a47ec8cddf35",
+  "path": "gtsp-code-contribution",
+  "path_key": "gtsp-code-contribution",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}
