@@ -6,5 +6,6 @@
   "version": "1.0.0",
   "skillId": "skill_2053081352079101952",
   "iconLocalPath": "/Users/marvin/.workbuddy/skills/skill_2053081352079101952/_icon.png",
-  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/apple-reminders.png"
+  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/apple-reminders.png",
+  "installedContentHash": "sha256:0e6f8b743203b19aac1d22acb3f99677b61534cfdddd545dd158798179e50a66"
 }
