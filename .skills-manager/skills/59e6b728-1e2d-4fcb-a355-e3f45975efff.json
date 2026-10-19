@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "59e6b728-1e2d-4fcb-a355-e3f45975efff",
+  "path": "aliyun-thoughts-export",
+  "path_key": "aliyun-thoughts-export",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}
