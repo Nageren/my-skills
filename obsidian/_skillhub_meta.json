@@ -1,0 +1,21 @@
+{
+  "name": "obsidian",
+  "installedAt": 1782885070723,
+  "source": "marketplace",
+  "version": "1.0.0",
+  "skillId": "skill_2053082563940843521",
+  "examples_zh": [
+    "在Obsidian里创建一篇新笔记",
+    "搜索Obsidian知识库里关于产品设计的内容",
+    "查看笔记的关系图谱"
+  ],
+  "examples_en": [
+    "Create a new note in Obsidian",
+    "Search my Obsidian vault for product design notes",
+    "View the knowledge graph"
+  ],
+  "iconSource": "https://openplatform-cdn.codebuddy.cn/public/operation-platform/skill-icons/skill_2053082563940843521/9580e66c5a18e746.png",
+  "iconLocalPath": "/Users/marvin/.workbuddy/skills/skill_2053082563940843521/_icon.png",
+  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/operation-platform/skill-icons/skill_2053082563940843521/9580e66c5a18e746.png",
+  "installedContentHash": "sha256:5f0c60d9c9eb787f5119aaad59a20679567db58ab299fdcb53be298e02118208"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0bb71d6f-1eb8-4623-ba91-3cfa45081e24",
+  "path": "competitor-news-monitor",
+  "path_key": "competitor-news-monitor",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

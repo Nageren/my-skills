@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0d1c70dd-50de-4f36-8620-99400e4d2076",
+  "path": "node-inspect-debugger-2",
+  "path_key": "node-inspect-debugger-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "fc38717a-2d0e-451d-b8a7-9b4b0c9407bd",
+  "path": "nano-banana-pro-2",
+  "path_key": "nano-banana-pro-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

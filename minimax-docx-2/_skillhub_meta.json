@@ -1,0 +1,11 @@
+{
+  "name": "Word 文档生成",
+  "installedAt": 1779082782316,
+  "source": "marketplace",
+  "iconSource": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/minimax-docx.svg",
+  "version": "1.0.0",
+  "skillId": "skill_2053082396193849344",
+  "iconLocalPath": "/Users/marvin/.workbuddy/skills/skill_2053082396193849344/_icon.svg",
+  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/minimax-docx.svg",
+  "installedContentHash": "sha256:92b4ead7ca859c2aaaa826ddeccbcd9a9962abbb77d61eafe43158b71427ed2d"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d80aea64-08b0-44fd-9e00-232836aca3b6",
+  "path": "feishu-doc-bot-authoring",
+  "path_key": "feishu-doc-bot-authoring",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

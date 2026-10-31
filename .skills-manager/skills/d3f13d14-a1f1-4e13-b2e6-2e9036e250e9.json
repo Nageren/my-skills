@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d3f13d14-a1f1-4e13-b2e6-2e9036e250e9",
+  "path": "elastic-log-query",
+  "path_key": "elastic-log-query",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

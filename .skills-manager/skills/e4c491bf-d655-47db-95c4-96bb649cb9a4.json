@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e4c491bf-d655-47db-95c4-96bb649cb9a4",
+  "path": "karpathy-guidelines",
+  "path_key": "karpathy-guidelines",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "db94a39a-997e-4b3b-a7f9-44245b5b022e",
+  "path": "skillhub-daily",
+  "path_key": "skillhub-daily",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b9717580-63cc-4eaa-a5dd-a791e4835e3c",
+  "path": "yunxiao-thoughts-export",
+  "path_key": "yunxiao-thoughts-export",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

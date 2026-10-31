@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6283b9b1-eef3-480d-87a6-c1617ac1fbc8",
+  "path": "handoff-3",
+  "path_key": "handoff-3",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

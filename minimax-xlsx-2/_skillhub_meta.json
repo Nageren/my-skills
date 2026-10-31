@@ -1,0 +1,11 @@
+{
+  "name": "Excel 文件处理",
+  "installedAt": 1779082783964,
+  "source": "marketplace",
+  "iconSource": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/minimax-xlsx.svg",
+  "version": "1.0.0",
+  "skillId": "skill_2053082401071824896",
+  "iconLocalPath": "/Users/marvin/.workbuddy/skills/skill_2053082401071824896/_icon.svg",
+  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/minimax-xlsx.svg",
+  "installedContentHash": "sha256:96670d5feb3c55f478dd72232d26b3da3cd28d15df59fd3fc67e3f3e690f2035"
+}

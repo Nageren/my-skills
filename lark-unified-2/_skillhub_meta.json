@@ -1,0 +1,11 @@
+{
+  "name": "飞书套件",
+  "installedAt": 1779082745074,
+  "source": "marketplace",
+  "iconSource": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/lark-unified.svg",
+  "version": "2.3.0",
+  "skillId": "skill_2053082253572640768",
+  "iconLocalPath": "/Users/marvin/.workbuddy/skills/skill_2053082253572640768/_icon.svg",
+  "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/lark-unified.svg",
+  "installedContentHash": "sha256:1e4e15502e7eaadcb2f5a588cc23bb4b31456031deae041eed2ad186bc49a6aa"
+}
