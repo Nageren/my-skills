@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a2bdd213-1352-4d3d-894c-4303b7ef5419",
+  "path": "handoff-4",
+  "path_key": "handoff-4",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "skillssh",
+    "ref": "mattpocock/skills/handoff",
+    "subpath": "skills/productivity/handoff",
+    "branch": null
+  }
+}
