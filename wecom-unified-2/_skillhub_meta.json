@@ -3,9 +3,9 @@
   "installedAt": 1779082696879,
   "source": "marketplace",
   "iconSource": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/wecom-unified.svg",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "skillId": "skill_2053083151135014912",
   "iconLocalPath": "/Users/marvin/.workbuddy/skills/skill_2053083151135014912/_icon.svg",
   "iconDownloadedFrom": "https://openplatform-cdn.codebuddy.cn/public/skills/icons/wecom-unified.svg",
-  "installedContentHash": "sha256:99d2a7c55af761316228f18db3d09cd8b7f5c6bb8ff02edd3c3650f93819d5b4"
+  "installedContentHash": "sha256:750349550ac24b1ba303cb3f2c148d25404ff218d28ba1ffbc64bb7b6a3409d9"
 }
