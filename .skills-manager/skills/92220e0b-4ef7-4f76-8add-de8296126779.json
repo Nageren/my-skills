@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "92220e0b-4ef7-4f76-8add-de8296126779",
+  "path": "archify-review",
+  "path_key": "archify-review",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "skillssh",
+    "ref": "tt-a1i/archify/archify-review",
+    "subpath": ".agents/skills/archify-review",
+    "branch": null
+  }
+}
