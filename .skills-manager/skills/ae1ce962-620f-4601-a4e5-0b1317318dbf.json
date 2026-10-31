@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "ae1ce962-620f-4601-a4e5-0b1317318dbf",
+  "path": "ascii-video-2",
+  "path_key": "ascii-video-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

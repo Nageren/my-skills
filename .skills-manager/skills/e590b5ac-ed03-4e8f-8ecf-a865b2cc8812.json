@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e590b5ac-ed03-4e8f-8ecf-a865b2cc8812",
+  "path": "archify",
+  "path_key": "archify",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

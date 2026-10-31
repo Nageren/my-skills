@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d9f094a1-7157-4e15-a9fa-066a1e931d52",
+  "path": "airtable-2",
+  "path_key": "airtable-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}
