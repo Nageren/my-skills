@@ -1,0 +1,149 @@
+"""badcase_runner strict-exact 比对分支单测。
+
+历史缺陷（docs/design/skill-evo-replay-eval.md §3.2 required，2026-09-03 修正）：
+`if strict_exact and expected_rules:` 使放行型 case（expected 为空）在 strict
+模式下落入 else 分支恒 passed=True——strict 双向比对对空 expected 形同虚设，
+夹具意外触发的任何规则都不显形。修正后 strict 模式无条件双向比对。
+"""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from badcase_runner import parse_expected, parse_prompts, run_badcase
+
+# 放行型 expected.md（与 skills/ddl-guard/eval/007-clean 同构：
+# 「预期检查输出」小节内无「脚本自动检出」行 → expected_rules = []）
+RELEASE_EXPECTED = (
+    "# f.sql\n\n"
+    "## 预期检查输出\n\n"
+    "（本 case 无脚本自动检出项——预期检查脚本检出为空）\n"
+)
+
+# 拦截型 expected.md：声明两条脚本规则
+INTERCEPT_EXPECTED = (
+    "# f.sql\n\ncheck: fake_check.py\n\n"
+    "## 预期检查输出\n\n"
+    "- 脚本自动检出：禁用类型、表注释缺失\n"
+)
+
+
+def _make_case(tmp_path, expected_md, detected_rules):
+    """最小 fake 技能 + 单 case 语料：fake_check.py 固定检出给定规则。"""
+    root = tmp_path / "proj"
+    skill = root / "skills" / "fake-skill"
+    (skill / "scripts").mkdir(parents=True)
+    (skill / "scripts" / "fake_check.py").write_text(
+        "import json\n"
+        "print(json.dumps([{'issues': [{'rule': r} for r in "
+        + repr(detected_rules) + "]}]))\n",
+        encoding="utf-8")
+    case = skill / "badcase" / "090-clean-fake"
+    (case / "input").mkdir(parents=True)
+    (case / "input" / "f.sql").write_text("-- fake input\n", encoding="utf-8")
+    (case / "expected.md").write_text(expected_md, encoding="utf-8")
+    return root, case
+
+
+class TestStrictExact:
+    def test_empty_expected_with_findings_fails(self, tmp_path):
+        # spec:replay-eval-1 否定式条款：放行型（expected 空）strict 下
+        # 实际检出规则必须 FAIL（旧逻辑落入 else 恒 passed=True，漏检）
+        root, case = _make_case(tmp_path, RELEASE_EXPECTED, ["禁用类型"])
+        result = run_badcase("fake-skill", "090-clean-fake", case, root,
+                             strict_exact=True)
+        assert result.passed is False
+        assert result.unexpected_rules == ["禁用类型"]
+        assert result.missing_rules == []
+
+    def test_empty_expected_clean_stays_green(self, tmp_path):
+        # spec:replay-eval-1 放行型干净输入（零检出）strict 模式保持全绿
+        root, case = _make_case(tmp_path, RELEASE_EXPECTED, [])
+        result = run_badcase("fake-skill", "090-clean-fake", case, root,
+                             strict_exact=True)
+        assert result.passed is True
+        assert result.unexpected_rules == []
+
+    def test_non_strict_empty_expected_ignores_findings(self, tmp_path):
+        # 非 strict 模式不检查 unexpected 方向（语义分界：仅 strict 管双向）
+        root, case = _make_case(tmp_path, RELEASE_EXPECTED, ["禁用类型"])
+        result = run_badcase("fake-skill", "090-clean-fake", case, root,
+                             strict_exact=False)
+        assert result.passed is True
+        assert result.unexpected_rules == []
+
+    def test_non_strict_declared_rules_missing_only(self, tmp_path):
+        # spec:replay-eval-1 非 strict 单向语义锚：只查 missing，多出不罚（分界）
+        root, case = _make_case(tmp_path, INTERCEPT_EXPECTED,
+                                ["禁用类型", "全角字符"])
+        result = run_badcase("fake-skill", "090-clean-fake", case, root,
+                             strict_exact=False)
+        assert result.passed is False            # 表注释缺失 → missing 挂
+        assert result.missing_rules == ["表注释缺失"]
+        assert result.unexpected_rules == []     # 非 strict 不算 unexpected
+
+    def test_non_strict_declared_rules_all_hit_passes(self, tmp_path):
+        # spec:replay-eval-1 非 strict 全命中保持绿（既有主路径不回归）
+        root, case = _make_case(tmp_path, INTERCEPT_EXPECTED,
+                                ["禁用类型", "表注释缺失"])
+        result = run_badcase("fake-skill", "090-clean-fake", case, root,
+                             strict_exact=False)
+        assert result.passed is True
+        assert result.missing_rules == []
+
+    def test_declared_rules_bidirectional(self, tmp_path):
+        # spec:replay-eval-1 拦截型 strict 双向既有语义锚：漏检 + 多出未声明均 FAIL
+        root, case = _make_case(tmp_path, INTERCEPT_EXPECTED,
+                                ["禁用类型", "全角字符"])
+        result = run_badcase("fake-skill", "090-clean-fake", case, root,
+                             strict_exact=True)
+        assert result.passed is False
+        assert result.missing_rules == ["表注释缺失"]
+        assert result.unexpected_rules == ["全角字符"]
+
+
+class TestParsePrompts:
+    """prompts.md 双格式解析（@date 2026-09-20 双 Agent 扩展）。
+
+    与 skills/skill-evo/scripts/evo_replay.py 的 parse_prompts 同构：
+    旧式纯 bullet 零回归；`---` 围栏块 = 回合（块内 bullet 恒等于回合）。
+    """
+
+    def test_missing_file_returns_empty(self, tmp_path):
+        assert parse_prompts(tmp_path / "absent.md") == ([], [])
+
+    def test_plain_bullets_zero_regression(self, tmp_path):
+        # 旧式：每行 bullet 一条 prompt，已知问题 section 剥离（历史行为锚）
+        f = tmp_path / "prompts.md"
+        f.write_text("# 提示词集\n\n- 素材A\n- 素材B\n\n"
+                     "## 已知问题\n\n- 噪音1\n", encoding="utf-8")
+        assert parse_prompts(f) == (["素材A", "素材B"], ["噪音1"])
+
+    def test_fenced_blocks_each_one_prompt(self, tmp_path):
+        # 围栏模式：无 bullet 块剥 `#` 标题后整块压缩空白为一条
+        f = tmp_path / "prompts.md"
+        f.write_text("# 提示词集\n\n---\n\n## 回合1\n\n素材一\n继续行\n\n"
+                     "---\n\n- 素材二a\n- 素材二b\n", encoding="utf-8")
+        assert parse_prompts(f) == (["素材一 继续行", "素材二a", "素材二b"], [])
+
+
+def test_parse_expected_manual_channels(tmp_path):
+    """manual 双通道口径钉死（真相源 scripts/badcase_format.py，2026-09-25 收编）：
+
+    - 「人工补充规则：」逐 ID 拆分入列（旧实现整串单元素）
+    - 别名串剥首 token 外溢到 manual 通道（strip_aliases 全通道生效）
+    - 「人工补充：」描述行保留原文
+    - 规则 ID 恒排描述前（拼接序），仅展示不参与比对
+    """
+    f = tmp_path / "expected.md"
+    f.write_text(
+        "check: x.py\n\n## 预期检查输出\n\n"
+        "- 脚本自动检出：命名规范|命名、类型规范\n"
+        "- 人工补充规则：M1、M2、M3|别名\n"
+        "- 人工补充：拼音、泛化词（描述）\n",
+        encoding="utf-8")
+    script, rules, manual = parse_expected(f)
+    assert script == "x.py"
+    assert rules == ["命名规范", "类型规范"]
+    assert manual == ["M1", "M2", "M3", "拼音、泛化词（描述）"]

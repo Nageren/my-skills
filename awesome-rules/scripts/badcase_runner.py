@@ -1,0 +1,364 @@
+#!/usr/bin/env python3
+"""
+Badcase 回归测试工具
+
+扫描所有技能的 badcase/ 目录，对每个 badcase 运行检查脚本，
+将实际检出结果与 expected.md 中声明的期望规则进行比对。
+
+每个 badcase 包含:
+  - input/      : 共享待审查文件
+  - expected.md : 期望结果（check 脚本 + 规则列表），只写一次
+  - prompts.md  : 提示词集 + 已知问题（仅记录，不影响通过/失败）
+
+expected.md 期望模型（双通道）:
+  - 「## 预期检查输出」小节存在时，只认其中的 bullet：
+      - 脚本自动检出：<规则>、<规则>…  → 拆分为期望规则，参与比对
+      - 人工补充：<说明>              → 仅记录展示，不参与比对（脚本本就检不出）
+  - 无该小节（旧式）：第一个 ## 标题前的顶层 bullet 作为期望规则
+
+用法:
+  python3 scripts/badcase_runner.py                     # 运行所有 badcase
+  python3 scripts/badcase_runner.py --skill ddl-guard    # 只运行指定技能
+  python3 scripts/badcase_runner.py --verbose            # 显示实际检出详情
+  python3 scripts/badcase_runner.py --strict-exact       # 发版回归：双向精确比对
+
+严格模式（--strict-exact，发版回归用）：在「期望的都检出」之上再要求双向相等——
+每条实际检出规则都必须命中某条期望，捕获「夹具多出未声明规则」（新规则落地、
+夹具意外触发其他规则）。expected 为空（放行型 case）时同样生效：任何实际
+检出都无期望可命中 → unexpected → FAIL，放行型夹具不因「无期望」虚设。
+子串匹配的歧义（如"依赖方向"含于"跨域依赖方向"）会让双向判定不可靠，
+严格模式退化为精确等值匹配。
+
+"""
+
+import argparse
+import json
+import subprocess
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from badcase_format import parse_prompts
+from badcase_format import parse_expected as _parse_expected
+
+
+@dataclass
+class BadcaseResult:
+    skill: str
+    name: str
+    path: str
+    passed: bool = True
+    expected_rules: list = field(default_factory=list)
+    manual_rules: list = field(default_factory=list)
+    actual_rules: list = field(default_factory=list)
+    missing_rules: list = field(default_factory=list)
+    unexpected_rules: list = field(default_factory=list)
+    scripts_run: list = field(default_factory=list)
+    prompts: list = field(default_factory=list)
+    known_issues: list = field(default_factory=list)
+    error: str = ""
+
+
+def find_project_root() -> Path:
+    """通过查找 skills/ 目录定位项目根目录。"""
+    p = Path(__file__).resolve().parent
+    while p != p.parent:
+        if (p / "skills").is_dir():
+            return p
+        p = p.parent
+    return Path(__file__).resolve().parent.parent
+
+
+def find_check_scripts(skill_dir: Path):
+    """查找技能 scripts/ 目录下所有 *_check.py 脚本。"""
+    scripts_dir = skill_dir / "scripts"
+    return sorted(scripts_dir.glob("*_check.py")) if scripts_dir.is_dir() else []
+
+
+def parse_expected(expected_path: Path):
+    """解析 expected.md，返回 (check_script, expected_rules, manual_rules)。
+
+    双通道期望模型（见模块 docstring）：脚本自动检出参与比对，
+    人工补充（规则 ID + 描述）仅记录不比对——把人工审查项计入失败会让
+    runner 永远红着。别名串剥首 token 规范名（纯脚本回归语义），
+    解析真相源在 scripts/badcase_format.py。
+    """
+    check_script, expected_rules, manual_ids, manual_notes = _parse_expected(
+        expected_path, strip_aliases=True)
+    return check_script, expected_rules, [*manual_ids, *manual_notes]
+
+
+
+def run_check_script(script_path: Path, input_dir: Path):
+    """运行检查脚本，返回 (issues, error)。"""
+    try:
+        result = subprocess.run(
+            ["python3", str(script_path), str(input_dir), "--format", "json"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return [], f"脚本超时: {script_path.name}"
+    except Exception as e:
+        return [], f"脚本执行异常: {e}"
+
+    if result.returncode == 2:
+        stderr = result.stderr.strip()
+        if "未找到" in stderr or "not found" in stderr.lower():
+            return [], ""
+        return [], f"脚本运行错误: {stderr}"
+
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return [], "无法解析脚本输出 (JSON 格式错误)"
+
+    issues = []
+    if isinstance(data, list):
+        for file_result in data:
+            issues.extend(file_result.get("issues", []))
+    elif isinstance(data, dict):
+        issues.extend(data.get("issues", []))
+
+    return issues, ""
+
+
+def rule_matches(expected_rule: str, actual_rules: list) -> bool:
+    """检查期望规则是否被实际检出（子串匹配）。"""
+    expected_lower = expected_rule.lower()
+    for actual in actual_rules:
+        actual_lower = actual.lower()
+        if expected_lower in actual_lower or actual_lower in expected_lower:
+            return True
+    return False
+
+def exact_match_failures(expected_rules: list, actual_rules: list):
+    """严格模式双向比对：返回 (missing, unexpected)，均基于小写精确等值。
+
+    missing     — 期望了但未检出的规则
+    unexpected  — 检出了但未声明的规则（普通模式不检查的方向）
+    """
+    expected_set = {r.lower() for r in expected_rules}
+    actual_set = {r.lower() for r in actual_rules}
+    missing = [r for r in expected_rules if r.lower() not in actual_set]
+    unexpected = [r for r in actual_rules if r.lower() not in expected_set]
+    return missing, unexpected
+
+
+def run_badcase(skill_name, case_name, case_dir: Path, project_root: Path,
+                strict_exact: bool = False):
+    """运行单个 badcase，返回结果。"""
+    skill_dir = project_root / "skills" / skill_name
+    input_dir = case_dir / "input"
+    expected_path = case_dir / "expected.md"
+    prompts_path = case_dir / "prompts.md"
+
+    prompts, known_issues = parse_prompts(prompts_path)
+    check_script, expected_rules, manual_rules = parse_expected(expected_path)
+
+    result = BadcaseResult(
+        skill=skill_name, name=case_name, path=str(case_dir),
+        expected_rules=expected_rules, manual_rules=manual_rules,
+        prompts=prompts, known_issues=known_issues,
+    )
+
+    # 无 expected.md → 跳过
+    if not expected_path.is_file():
+        result.error = "无 expected.md，跳过"
+        result.passed = True
+        return result
+
+    # 确定运行哪些脚本
+    all_scripts = find_check_scripts(skill_dir)
+    if check_script:
+        scripts_to_run = [s for s in all_scripts if s.name == check_script]
+        if not scripts_to_run:
+            candidate = skill_dir / "scripts" / check_script
+            if candidate.is_file():
+                scripts_to_run = [candidate]
+    else:
+        scripts_to_run = all_scripts
+
+    if not scripts_to_run:
+        result.error = "未找到检查脚本"
+        result.passed = False
+        return result
+
+    # 运行脚本（对共享 input 只跑一次）
+    all_issues = []
+    scripts_run = []
+    errors = []
+    for script_path in scripts_to_run:
+        issues, err = run_check_script(script_path, input_dir)
+        if err:
+            errors.append(f"{script_path.name}: {err}")
+        else:
+            scripts_run.append(script_path.name)
+        all_issues.extend(issues)
+
+    result.scripts_run = scripts_run
+
+    actual_rules = list(dict.fromkeys(
+        i.get("rule", "") for i in all_issues if i.get("rule")
+    ))
+    result.actual_rules = actual_rules
+
+    if errors:
+        result.error = "; ".join(errors)
+
+    # 比对期望规则（strict 模式无条件双向：expected 为空的放行型 case
+    # 也要算 unexpected 方向——夹具意外触发任何规则都不得静默放行）
+    if strict_exact:
+        # 双向精确：捕获夹具多出未声明规则（新规则落地/意外触发）
+        missing, unexpected = exact_match_failures(expected_rules, actual_rules)
+        result.missing_rules = missing
+        result.unexpected_rules = unexpected
+        result.passed = not missing and not unexpected
+    elif expected_rules:
+        missing = [r for r in expected_rules if not rule_matches(r, actual_rules)]
+        result.missing_rules = missing
+        result.passed = not missing
+    else:
+        result.passed = True
+
+    return result
+
+
+def print_result(result: BadcaseResult, verbose=False):
+    """打印单个 badcase 结果。"""
+    green, red, dim, reset = "\033[32m", "\033[31m", "\033[2m", "\033[0m"
+    use_color = sys.stdout.isatty()
+
+    def c(text, color):
+        return f"{color}{text}{reset}" if use_color else text
+
+    status = "✓ PASS" if result.passed else "✗ FAIL"
+    status_colored = c(status, green if result.passed else red)
+
+    print(f"\n{'─'*55}")
+    print(f"  {status_colored}  [{result.skill}] {result.name}")
+    print(f"{'─'*55}")
+
+    if result.error:
+        print(f"  {c('⚠', red)} {result.error}")
+
+    if result.scripts_run:
+        print(f"  脚本: {', '.join(result.scripts_run)}")
+
+    # 提示词
+    if result.prompts:
+        print(f"  提示词 ({len(result.prompts)} 条):")
+        for p in result.prompts:
+            preview = p if len(p) <= 55 else f"{p[:52]}..."
+            print(f"    {c('•', dim)} {preview}")
+
+    # 已知问题
+    if result.known_issues:
+        print(f"  {c('已知问题', dim)}:")
+        for issue in result.known_issues:
+            preview = issue if len(issue) <= 65 else f"{issue[:62]}..."
+            print(f"    {c('!', dim)} {preview}")
+
+    # 期望规则
+    if result.expected_rules:
+        print(f"  期望检出 {len(result.expected_rules)} 条规则:")
+        for rule in result.expected_rules:
+            if rule in result.missing_rules:
+                print(f"    {c('✗', red)} {rule} {c('(未检出)', red)}")
+            else:
+                print(f"    {c('✓', green)} {rule}")
+
+    # 严格模式额外方向：检出但未声明（普通模式不检查）
+    if result.unexpected_rules:
+        print(f"  {c('多出未声明规则', red)}:")
+        for rule in result.unexpected_rules:
+            print(f"    {c('✗', red)} {rule} {c('(expected.md 未声明)', red)}")
+
+    # 人工补充（双通道期望模型：不参与比对，仅提示人工审查范围）
+    if result.manual_rules:
+        print(f"  {c('人工补充（不参与脚本比对）', dim)}:")
+        for rule in result.manual_rules:
+            print(f"    {c('•', dim)} {rule}")
+
+    # 实际检出
+    if (verbose or not result.passed) and result.actual_rules:
+        print(f"  实际检出 {len(result.actual_rules)} 条规则:")
+        for rule in result.actual_rules:
+            print(f"    {c('→', dim)} {rule}")
+
+
+def discover_badcases(project_root: Path, skill_filter=None):
+    """发现所有 badcase 目录。"""
+    badcases = []
+    skills_dir = project_root / "skills"
+    if not skills_dir.is_dir():
+        return badcases
+
+    for skill_dir in sorted(skills_dir.iterdir()):
+        if not skill_dir.is_dir():
+            continue
+        skill_name = skill_dir.name
+        if skill_filter and skill_name != skill_filter:
+            continue
+
+        badcase_dir = skill_dir / "badcase"
+        if not badcase_dir.is_dir():
+            continue
+
+        for case_dir in sorted(badcase_dir.iterdir()):
+            if not case_dir.is_dir():
+                continue
+            if not (case_dir / "input").is_dir():
+                continue
+            badcases.append((skill_name, case_dir.name, case_dir))
+
+    return badcases
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Badcase 回归测试工具 — 对所有 badcase 运行检查脚本并比对期望结果"
+    )
+    parser.add_argument("--skill", help="只运行指定技能的 badcase")
+    parser.add_argument("--verbose", "-v", action="store_true", help="显示实际检出详情")
+    parser.add_argument("--strict-exact", action="store_true",
+                        help="严格模式：双向精确比对，检出未声明规则也判失败（发版回归用）")
+    args = parser.parse_args()
+
+    project_root = find_project_root()
+    badcases = discover_badcases(project_root, args.skill)
+
+    if not badcases:
+        print("未找到 badcase 目录。")
+        scan_path = f"{project_root}/skills/*/badcase/*/"
+        print(f"  扫描路径: {scan_path}")
+        return 0
+
+    print(f"{'='*55}")
+    print("  Badcase 回归测试")
+    print(f"  共 {len(badcases)} 个 badcase")
+    print(f"{'='*55}")
+
+    results = []
+    for skill_name, case_name, case_dir in badcases:
+        result = run_badcase(skill_name, case_name, case_dir, project_root,
+                             strict_exact=args.strict_exact)
+        results.append(result)
+        print_result(result, args.verbose)
+
+    passed = sum(r.passed for r in results)
+    failed = sum(not r.passed for r in results)
+
+    green, red, reset = "\033[32m", "\033[31m", "\033[0m"
+    use_color = sys.stdout.isatty()
+
+    print("\n" + "=" * 55)
+    summary = f"总计: {len(results)} 个 badcase, {passed} 通过, {failed} 失败"
+    color = green if failed == 0 else red
+    print(f"  {color}{summary}{reset}" if use_color else f"  {summary}")
+    print(f"{'='*55}")
+
+    return 1 if failed > 0 else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

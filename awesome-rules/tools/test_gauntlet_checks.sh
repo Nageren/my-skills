@@ -1,0 +1,1450 @@
+#!/bin/sh
+# checker 负控制自测：证明本 gauntlet 依赖的检查器"会失败"，而不是只会放行。
+# NC1 检查 md_link_check（既有检查器，属回归护甲）；NC2 检查 must_not_match（本次新增）。
+set -e
+cd "$(dirname "$0")/.."
+PY=${GAUNTLET_PY:-$(command -v python3)}
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+# 测试密封性（steering/testing-standards.md §测试密封性，ADR-010）：本脚本
+# 大量建 tmp 夹具仓（git init/-C）；hook 注入的 GIT_* 会劫持仓库发现
+# （2026-08-22 事故）。顶层剥除，子进程继承。
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+      GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_NAMESPACE
+
+fails=0
+ok()  { echo "  ok:   $1"; }
+bad() { echo "  FAIL: $1"; fails=$((fails + 1)); }
+
+. tools/must_not_match.sh
+
+# ── NC1 死链负控制：含死链的 markdown 必须被 md_link_check 拦下 ────────
+cat >"$TMP/dead.md" <<'EOF'
+# 负控制夹具
+[死链](./no-such-target.md)
+EOF
+# 扫描面 = tracked 面：夹具必须是真 git 仓（非 git 目录 fail-closed 拒判）
+git init -q "$TMP" && git -C "$TMP" add dead.md
+if "$PY" scripts/md_link_check.py "$TMP" >"$TMP/out1" 2>&1; then
+    rc1=0
+else
+    rc1=$?
+fi
+if [ "$rc1" -ne 0 ] && grep -q 'no-such-target' "$TMP/out1"; then
+    ok "NC1 死链被拦且报告指明死链目标"
+else
+    bad "NC1 期望 rc!=0 且输出含 no-such-target，实际 rc=$rc1: $(head -3 "$TMP/out1")"
+fi
+
+# ── NC1b 产物排除正控制：链运行时审计副本不属文档链接门范围 ────────────
+# reject-receipt 的 ../blob/main/ 链接只在发布目的地（issue 评论）可解析，
+# 磁盘上必为死链；.factory/artifacts 是 gitignored 运行时产物（2026-08-23
+# 实证：本机跑过链的人类推送被假阳性拦死）。死链仍须拦（NC1 同跑）。
+mkdir -p "$TMP/.factory/artifacts"
+printf '# t\n[产物](../blob/main/MISSION.md)\n' >"$TMP/.factory/artifacts/r.md"
+printf '.factory/artifacts/\n' >"$TMP/.gitignore" && git -C "$TMP" add .gitignore
+if "$PY" scripts/md_link_check.py "$TMP" >"$TMP/out1b" 2>&1; then :; fi
+if grep -q 'artifacts/r.md' "$TMP/out1b"; then
+    bad "NC1b 期望 .factory/artifacts 被排除，实际被报告"
+elif ! grep -q 'no-such-target' "$TMP/out1b"; then
+    bad "NC1b 排除扩面吞掉了真实死链检测"
+else
+    ok "NC1b 产物死链不误报，真实死链仍拦（tracked 面语义）"
+fi
+
+# ── NC2 秘密负控制：含假凭据字面量的文件必须被 must_not_match 拦下 ────
+# 只认 rc=1（真拦截）；rc=2 是检查器自身损坏，同样判负——坏检查器不算通过。
+# 夹具经 $K 拼接：本脚本自身在被扫描面内，源码不得出现守卫的字面形态
+# （与 must_not_match.sh 的 [e] 括号防自匹配同一原则）。
+K=key
+cat >"$TMP/leak.py" <<EOF
+config = {
+    "api_${K}": "AKIAIOSFODNN7EXAMPLE",
+}
+EOF
+if must_not_match "$SECRET_PATTERN" "$TMP/leak.py"; then
+    _rc2=0
+else
+    _rc2=$?
+fi
+if [ "$_rc2" -eq 1 ]; then
+    ok "NC2 假凭据被拦（rc=1）"
+else
+    bad "NC2 期望 rc=1, 实际 rc=${_rc2}（0=未拦, 2=检查器损坏）"
+fi
+
+# ── NC3 放行路径在 set -e 上下文必须 rc=0 ──────────────────────────────
+# 回归：grep 无匹配返回 1 是好路径，曾被 set -e 当失败吞掉整层（2026-08-21）。
+# 注意不能写成 if (set -e; ...)：if 上下文豁免 errexit，复现不了真实陷阱；
+# 必须用子进程——其内部的 set -e 是真实的非测试上下文。
+cat >"$TMP/clean.py" <<'EOF'
+value = "just some ordinary data"
+EOF
+out3=$(sh -c 'set -e; . "$1/tools/must_not_match.sh"; must_not_match "$SECRET_PATTERN" "$2"; echo SURVIVED' sh "$PWD" "$TMP/clean.py") || out3=""
+if [ "$out3" = "SURVIVED" ]; then
+    ok "NC3 干净文件在真实 set -e 上下文通过"
+else
+    bad "NC3 干净文件应存活到 echo（out3='$out3'）——errexit 吞掉 grep rc=1 好路径"
+fi
+
+# ── NC4 inline-python 负控制：`-c -` 事故原形必须被拦 ─────────────────
+# 回归（2026-08-22）：feedback 适配节点产出的内联 python 改形逃过全部
+# 既有检查。夹具覆盖 R1（-c -）、R2（-c+heredoc 并用）、R3（语法错误）。
+# 夹具经 printf 分段拼接：本脚本在 lint-inline-python 扫描面内，
+# 源文件不得出现事故字面形态（与 NC2 的 $K 拼接同一原则）；%s 占位在
+printf '#!/usr/bin/env bash\n' >"$TMP/nc_inline.sh"
+{
+    # shellcheck disable=SC2016  # $(…) 与 $f 是夹具字面量，不得在生成期展开
+    printf 'a="$(python3 -c %s "$f" <<%s\n' '-' "'PYX'"
+    printf 'import sys\nprint(sys.argv[1])\n'
+    printf '%s\n)\n' 'PYX'
+    # shellcheck disable=SC2016  # 同上
+    printf 'b="$(python3 -c %simport sys print(%s)"\n' "'" "'"
+    # shellcheck disable=SC2016  # 同上：夹具字面量防自匹配
+    printf 'd="$(python3 -c %sprint(1)%s)"\n' '"' '"'
+} >>"$TMP/nc_inline.sh"
+if "$PY" tools/check_inline_python.py "$TMP/nc_inline.sh" >"$TMP/out4" 2>&1; then
+    _rc4=0
+else
+    _rc4=$?
+fi
+if [ "$_rc4" -eq 1 ] && grep -q 'R1' "$TMP/out4" && grep -q 'R2' "$TMP/out4" \
+    && grep -q 'R3' "$TMP/out4" && grep -q 'R4' "$TMP/out4"; then
+    ok "NC4 -c - 事故原形 + -c/heredoc 并用 + 语法错误 + 双引号块全被拦（rc=1）"
+else
+    bad "NC4 期望 rc=1 且 R1/R2/R3/R4 全报，实际 rc=${_rc4}: $(head -3 "$TMP/out4")"
+fi
+
+# ── NC5 inline-python 好路径：合法形态不误伤 ────────────────────────────
+# R4 后合法形态 = 单引号 -c 块 + quoted heredoc。原「双引号块放行」契约
+# 2026-08-28 反转（存量清零后禁形，拦截断言并入 NC4）。
+cat >"$TMP/nc_inline_ok.sh" <<'EOF'
+#!/usr/bin/env bash
+json_field() {
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$1" "$2"
+}
+c="$(python3 - "$TMP/f" <<'PYX'
+import sys
+print(sys.argv[1])
+PYX
+)"
+EOF
+if "$PY" tools/check_inline_python.py "$TMP/nc_inline_ok.sh" >"$TMP/out5" 2>&1; then
+    ok "NC5 合法内联 python（单引号 -c + heredoc）放行"
+else
+    bad "NC5 期望 rc=0，实际 rc=$?: $(head -3 "$TMP/out5")"
+fi
+
+# ── NC6 inline-python 检查器损坏路径：rc=2 绝不算通过 ──────────────────
+if "$PY" tools/check_inline_python.py "$TMP/definitely-missing" >"$TMP/out6" 2>&1; then
+    _rc6=0
+else
+    _rc6=$?
+fi
+if [ "$_rc6" -eq 2 ]; then
+    ok "NC6 路径不存在返回 rc=2（检查器损坏 ≠ 通过）"
+else
+    bad "NC6 期望 rc=2，实际 rc=${_rc6}"
+fi
+
+# ── NC7 pipe-early-exit 负控制：三犯原形必须被拦 ──────────────────────
+# 夹具覆盖 R3（| true，PR #9/#23）、R1（grep -m1 中位，etf-radar#70）、
+# R2（head -n 中位）。夹具经 printf 分段拼接：本脚本在 lint-pipe-early-exit
+# 扫描面内，源码不得出现守卫的字面形态（与 NC2 的 $K 拼接同一原则）。
+NCP='|'; NCT='tru'; NCM='-m'; NCH='hea'; NCD='d'
+{
+    printf '#!/usr/bin/env bash\nset -euo pipefail\n'
+    # shellcheck disable=SC2016  # $(…) 是夹具字面量，不得在生成期展开
+    printf 'changed="$(git diff main %s %se)"\n' "$NCP" "$NCT"
+    # shellcheck disable=SC2016  # 同上
+    printf 'slug="$( { git remote; } %s grep %s1 x %s sed s/a/b/)"\n' "$NCP" "$NCM" "$NCP"
+    # shellcheck disable=SC2016  # 同上
+    printf 'top="$(cat list %s %s%s -n 3 %s wc -l)"\n' "$NCP" "$NCH" "$NCD" "$NCP"
+    # shellcheck disable=SC2016  # `||` 后管道边界：true 仍是其后管道左端
+    printf 'x || %se | wc -l\n' "$NCT"
+} >"$TMP/nc7_bad.sh"
+if "$PY" tools/check_pipe_early_exit.py "$TMP/nc7_bad.sh" >"$TMP/out7" 2>&1; then
+    _rc7=0
+else
+    _rc7=$?
+fi
+if [ "$_rc7" -eq 1 ] && grep -q 'R1' "$TMP/out7" && grep -q 'R2' "$TMP/out7" \
+    && grep -q 'R3' "$TMP/out7" && grep -q ':4:' "$TMP/out7" \
+    && grep -q ':5:' "$TMP/out7" && grep -q ':6:' "$TMP/out7"; then
+    ok "NC7 三犯原形全被拦（rc=1，行号+规则齐备）"
+else
+    bad "NC7 期望 rc=1 且 R1/R2/R3 与行号 4/5/6 全报，实际 rc=${_rc7}: $(head -3 "$TMP/out7")"
+fi
+if [ "$_rc7" -eq 1 ] && grep -q ':4:' "$TMP/out7" && grep -q -c 'R3' "$TMP/out7" >/dev/null; then
+    ok "NC7 || 后管道边界 R3 报行 4（x || true | wc -l 形）"
+else
+    bad "NC7 期望 || 边界 R3 报行 4，实际 rc=${_rc7}: $(grep ':4:' "$TMP/out7" || echo 无)"
+fi
+
+# NC7b 安全等价形放行：|| true（逻辑或层）、sed -n '1p'（消费全量）、
+# head 末位（末位即目的）——检查器边界是"确定性早退"，不是见管道就拦
+cat >"$TMP/nc7_ok.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+out="$(git diff main 2>/dev/null || true)"
+first="$(printf '%s\n' "$x" | sed -n '1p')"
+top="$(cat list | head)"
+EOF
+# 转义管道（\| 字面量）与行内注释（词首 #）不是命令——放行
+# shellcheck disable=SC2016  # 夹具字面量：转义管道在生成期不得被解释
+printf 'y="$(printf x \\| z)"\n' >>"$TMP/nc7_ok.sh"
+# shellcheck disable=SC2016  # 同上（注释行夹具）
+printf 'echo ok # %s %se is fine here\n' "$NCP" "$NCT" >>"$TMP/nc7_ok.sh"
+if "$PY" tools/check_pipe_early_exit.py "$TMP/nc7_ok.sh" >"$TMP/out7b" 2>&1; then
+    ok "NC7b 安全等价形（|| true / sed -n 1p / head 末位 / 转义 / 注释）放行"
+else
+    bad "NC7b 期望 rc=0，实际 rc=$?: $(head -3 "$TMP/out7b")"
+fi
+
+# NC7c 检查器损坏路径：rc=2 绝不算通过（与 NC6 同一语义）
+if "$PY" tools/check_pipe_early_exit.py "$TMP/definitely-missing" >"$TMP/out7c" 2>&1; then
+    _rc7c=0
+else
+    _rc7c=$?
+fi
+if [ "$_rc7c" -eq 2 ]; then
+    ok "NC7c 路径不存在返回 rc=2（检查器损坏 ≠ 通过）"
+else
+    bad "NC7c 期望 rc=2，实际 rc=${_rc7c}"
+fi
+
+# ── NC8 killpg-strict 负控制：PR #36 两侧原形必须被拦 ─────────────────
+# 夹具为单引号 heredoc 字符串：ast 只看语法节点，源码字面形态不自匹配
+# （本脚本在 pytest-scripts 扫描面外的 sh 面，Python 夹具经 heredoc 落盘）。
+cat >"$TMP/nc8_bad.py" <<'EOF'
+import os
+import pytest
+
+
+def kill_strict(pgid):
+    try:
+        os.killpg(pgid, 9)
+    except ProcessLookupError:
+        pass
+
+
+def test_flaky_probe(pgid):
+    with pytest.raises(ProcessLookupError):
+        os.killpg(pgid, 0)
+
+
+def test_flaky_probe_kw(pgid):
+    with pytest.raises(expected_exception=ProcessLookupError):
+        os.killpg(pgid, 0)
+EOF
+if "$PY" tools/check_killpg_strict.py "$TMP/nc8_bad.py" >"$TMP/out8" 2>&1; then
+    _rc8=0
+else
+    _rc8=$?
+fi
+if [ "$_rc8" -eq 1 ] && grep -q 'K1' "$TMP/out8" && grep -q 'K2' "$TMP/out8"; then
+    ok "NC8 killpg-strict 拦 K1/K2 原形"
+else
+    bad "NC8 期望 rc=1+K1+K2, 实际 rc=${_rc8}, 输出: $(cat "$TMP/out8")"
+fi
+
+# NC8b 安全等价形放行：元组容忍 / 裸 except——检查器边界是确定性缺失，
+# 不是见 killpg 就拦
+cat >"$TMP/nc8_ok.py" <<'EOF'
+import os
+
+
+def kill_tuple(pgid):
+    try:
+        os.killpg(pgid, 9)
+    except (ProcessLookupError, PermissionError):
+        pass
+EOF
+if "$PY" tools/check_killpg_strict.py "$TMP/nc8_ok.py" >"$TMP/out8b" 2>&1; then
+    ok "NC8b killpg-strict 放行容忍形态"
+else
+    bad "NC8b 期望 rc=0, 实际输出: $(cat "$TMP/out8b")"
+fi
+
+# NC8c 检查器损坏路径：rc=2 绝不算通过（与 NC6/NC7c 同一语义）
+if "$PY" tools/check_killpg_strict.py "$TMP/definitely-missing" >"$TMP/out8c" 2>&1; then
+    :
+else
+    _rc8c=$?
+fi
+if [ "$_rc8c" -eq 2 ]; then
+    ok "NC8c killpg-strict 损坏路径 rc=2"
+else
+    bad "NC8c 期望 rc=2, 实际 rc=${_rc8c:-0}"
+fi
+
+# ── NC9 插件版本门负控制：版本漂移必须被 check_plugin_versions 拦下 ──
+# 夹具是真 git 仓（tracked 面语义同 NC1）；package.json 0.4.0 对
+# .claude-plugin/plugin.json 0.3.0 → rc=1 且报告期望/实际。
+NC9DIR="$TMP/nc9"; export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
+git init -q "$NC9DIR"
+printf '{"version": "0.4.0"}' >"$NC9DIR/package.json"
+mkdir -p "$NC9DIR/.claude-plugin"
+printf '{"version": "0.3.0"}' >"$NC9DIR/.claude-plugin/plugin.json"
+git -C "$NC9DIR" add -A
+if "$PY" tools/check_plugin_versions.py "$NC9DIR" >"$TMP/out9" 2>&1; then
+    _rc9=0
+else
+    _rc9=$?
+fi
+if [ "$_rc9" -eq 1 ] && grep -q 'claude-plugin/plugin.json: 期望 0.4.0 实际 0.3.0' "$TMP/out9"; then
+    ok "NC9 版本漂移被拦且报告期望/实际"
+else
+    bad "NC9 期望 rc=1 且报告漂移明细, 实际 rc=${_rc9}: $(cat "$TMP/out9")"
+fi
+
+# ── NC9b 未登记清单漂移：新平台 manifest 不登记 = 硬失败 ──────────────
+mkdir -p "$NC9DIR/.new-platform"
+printf '{"version": "0.4.0"}' >"$NC9DIR/.new-platform/plugin.json"
+git -C "$NC9DIR" add -A
+if "$PY" tools/check_plugin_versions.py "$NC9DIR" >"$TMP/out9b" 2>&1; then
+    _rc9b=0
+else
+    _rc9b=$?
+fi
+if [ "$_rc9b" -eq 1 ] && grep -q '未登记' "$TMP/out9b"; then
+    ok "NC9b 未登记清单漂移被拦（require_dir 同语义）"
+else
+    bad "NC9b 期望 rc=1 且报未登记, 实际 rc=${_rc9b}: $(cat "$TMP/out9b")"
+fi
+
+# ── NC9c 检查器损坏路径：非 git 仓 rc=2 绝不算通过（NC6/NC8c 同语义）──
+if "$PY" tools/check_plugin_versions.py "$TMP/definitely-missing" >"$TMP/out9c" 2>&1; then
+    _rc9c=0
+else
+    _rc9c=$?
+fi
+if [ "$_rc9c" -eq 2 ]; then
+    ok "NC9c 非 git 仓返回 rc=2（检查器损坏 ≠ 通过）"
+else
+    bad "NC9c 期望 rc=2, 实际 rc=${_rc9c}"
+fi
+
+# ── NC9d 父仓子目录：路径基线错位拒判（PR #41 review 3）────────────────
+# git 向父目录找仓 → ls-files 相对父仓根，allowlist 相对 root 比较即错位。
+mkdir -p "$NC9DIR/sub" && printf '{"version": "0.4.0"}' >"$NC9DIR/sub/package.json"
+if "$PY" tools/check_plugin_versions.py "$NC9DIR/sub" >"$TMP/out9d" 2>&1; then
+    _rc9d=0
+else
+    _rc9d=$?
+fi
+if [ "$_rc9d" -eq 2 ] && grep -q '不是 git 仓库顶层' "$TMP/out9d"; then
+    ok "NC9d 父仓子目录拒判 rc=2 且指明错位"
+else
+    bad "NC9d 期望 rc=2 且报顶层错位, 实际 rc=${_rc9d}: $(cat "$TMP/out9d")"
+fi
+
+# ── NC9e 未跟踪 allowlist：发布面漂移（PR #41 review 4）─────────────────
+# gitignored 同名清单不参与发布——读了也不算数，未跟踪本身即漂移。
+NC9E="$TMP/nc9e"
+git init -q "$NC9E"
+printf '{"version": "1.0.0"}' >"$NC9E/package.json"
+mkdir -p "$NC9E/.claude-plugin"
+printf '{"version": "1.0.0"}' >"$NC9E/.claude-plugin/plugin.json"
+printf '.claude-plugin/\n' >"$NC9E/.gitignore"
+git -C "$NC9E" add -A
+if "$PY" tools/check_plugin_versions.py "$NC9E" >"$TMP/out9e" 2>&1; then
+    _rc9e=0
+else
+    _rc9e=$?
+fi
+if [ "$_rc9e" -eq 1 ] && grep -q 'claude-plugin/plugin.json: 未被 git 跟踪' "$TMP/out9e"; then
+    ok "NC9e 未跟踪 allowlist 报发布面漂移（不静默跳过）"
+else
+    bad "NC9e 期望 rc=1 且报未跟踪, 实际 rc=${_rc9e}: $(cat "$TMP/out9e")"
+fi
+# ── NC10 doc-freshness 负控制：文档漂移必须被 check_doc_freshness 拦下 ──
+# 夹具为最小仓形态（本门只读文件系统事实，无需 git 仓）。覆盖：干净全绿
+# 正控制、R4 漏报负控制、豁免双通道（--allow 正则 / 行内标记）、
+# rc=2 结构性损坏路径。原 R1/R2（.factory 组件覆盖/提示词计数）负控制
+# 随工厂于 2026-09-29 迁至 im47cn/awesome-factory。
+nc10_setup() {
+    _d=$1; _tc=${2:-2}
+    mkdir -p "$_d/skills/foo/scripts"
+    printf '# T\n' >"$_d/README.md"
+    printf '状态：测试 %s 项。\n' "$_tc" >"$_d/skills/foo/README.md"
+    printf 'def test_a():\n    pass\n\n\ndef test_b():\n    pass\n' \
+        >"$_d/skills/foo/scripts/test_x.py"
+}
+
+NC10="$TMP/nc10"; nc10_setup "$NC10"
+if "$PY" tools/check_doc_freshness.py "$NC10" >"$TMP/out10" 2>&1; then
+    ok "NC10 干净 fixture 全绿"
+else
+    bad "NC10 干净 fixture 期望 rc=0: $(cat "$TMP/out10")"
+fi
+
+# R4 数字不符：陈述 测试 7 项 vs 实际 2（test_x.py 两个 def test_）
+NC10C="$TMP/nc10c"; nc10_setup "$NC10C" 7
+if "$PY" tools/check_doc_freshness.py "$NC10C" >"$TMP/out10c" 2>&1; then
+    _rc10c=0
+else
+    _rc10c=$?
+fi
+if [ "$_rc10c" -eq 1 ] && grep -q 'R4' "$TMP/out10c" && grep -q '陈述 7 vs 实际 2' "$TMP/out10c"; then
+    ok "NC10c R4 技能测试数漂移检出"
+else
+    bad "NC10c 期望 rc=1+R4+陈述 7 vs 实际 2, 实际 rc=${_rc10c}: $(cat "$TMP/out10c")"
+fi
+
+# 豁免通道 1：--allow 正则命中证据行 → 同样的 R4 漂移放行
+NC10D="$TMP/nc10d"; nc10_setup "$NC10D" 7
+if "$PY" tools/check_doc_freshness.py "$NC10D" --allow 'skills/foo.*R4' >"$TMP/out10d" 2>&1; then
+    ok "NC10d --allow 正则豁免生效"
+else
+    bad "NC10d --allow 期望 rc=0: $(cat "$TMP/out10d")"
+fi
+
+# 豁免通道 2：行内豁免标记 → 同样的 R4 漂移放行
+NC10E="$TMP/nc10e"; nc10_setup "$NC10E" 7
+printf '状态：测试 7 项。 <!-- doc-freshness:allow -->\n' >"$NC10E/skills/foo/README.md"
+if "$PY" tools/check_doc_freshness.py "$NC10E" >"$TMP/out10e" 2>&1; then
+    ok "NC10e 行内豁免标记生效"
+else
+    bad "NC10e 行内标记期望 rc=0: $(cat "$TMP/out10e")"
+fi
+
+# 结构性损坏路径：缺 README.md/skills 等必需面 rc=2 绝不算通过（NC6/NC7c 同语义）
+if "$PY" tools/check_doc_freshness.py "$TMP/definitely-missing" >"$TMP/out10f" 2>&1; then
+    _rc10f=0
+else
+    _rc10f=$?
+fi
+if [ "$_rc10f" -eq 2 ]; then
+    ok "NC10f 结构性损坏 rc=2 拒判"
+else
+    bad "NC10f 期望 rc=2, 实际 rc=${_rc10f}"
+fi
+
+# ── NC11 doc-freshness R6/R7 负控制：枚举漂移必须被拦下 ────────────────
+# 在 NC10 最小仓上加 R6/R7 面：guard 技能（带 SKILL.md，R3 树须覆盖）、
+# steering 两规范（frontmatter title 供 R7b 主题）、opencode 清单、
+# CONTRIBUTING 树、AGENTS/CLAUDE 枚举行、load-steering 审查清单。
+nc11_setup() {
+    _d=$1
+    nc10_setup "$_d"
+    mkdir -p "$_d/skills/ddl-guard" "$_d/steering" "$_d/.opencode" "$_d/hooks"
+    printf -- '---\nname: ddl-guard\ndescription: t\n---\n' \
+        >"$_d/skills/ddl-guard/SKILL.md"
+    printf -- '---\ntitle: 测试规范\nscenario: t\n---\n' \
+        >"$_d/steering/testing-standards.md"
+    printf -- '---\ntitle: 审查报告输出规范\nscenario: t\n---\n' \
+        >"$_d/steering/report-standards.md"
+    {
+        echo '# T'
+        echo '```'
+        echo '├── skills/'
+        echo '│   ├── foo/'
+        echo '│   └── ddl-guard/'
+        echo '```'
+    } >"$_d/README.md"
+    cat >"$_d/.opencode/opencode.json" <<'EOF'
+{
+  "instructions": [
+    "skills/ddl-guard/SKILL.md",
+    "steering/testing-standards.md",
+    "steering/report-standards.md"
+  ]
+}
+EOF
+    {
+        echo '# C'
+        echo '```'
+        echo 'steering/'
+        echo '├── testing-standards.md'
+        echo '├── report-standards.md'
+        echo '└── gtsp/'
+        echo '```'
+    } >"$_d/CONTRIBUTING.md"
+    echo '- **通用设计规范**（设计阶段）：steering/*.md —— 测试、审查报告输出' \
+        >"$_d/AGENTS.md"
+    echo '- **通用设计规范**（设计阶段）：steering/*.md —— 测试、审查报告输出' \
+        >"$_d/CLAUDE.md"
+    echo 'parts.append("- 审查类任务可使用 /ddl-guard 自动检查")' \
+        >"$_d/hooks/load-steering.sh"
+}
+
+NC11="$TMP/nc11"; nc11_setup "$NC11"
+if "$PY" tools/check_doc_freshness.py "$NC11" >"$TMP/out11" 2>&1; then
+    ok "NC11 干净 fixture 全绿（R6/R7 无误报）"
+else
+    bad "NC11 干净 fixture 期望 rc=0: $(cat "$TMP/out11")"
+fi
+
+# R6 漏报：opencode instructions 缺 guard 技能条目
+NC11A="$TMP/nc11a"; nc11_setup "$NC11A"
+grep -v 'ddl-guard/SKILL.md' "$NC11A/.opencode/opencode.json" \
+    >"$NC11A/.opencode/opencode.json.tmp" && mv "$NC11A/.opencode/opencode.json.tmp" \
+    "$NC11A/.opencode/opencode.json"
+if "$PY" tools/check_doc_freshness.py "$NC11A" >"$TMP/out11a" 2>&1; then
+    _rc11a=0
+else
+    _rc11a=$?
+fi
+if [ "$_rc11a" -eq 1 ] && grep -q 'R6' "$TMP/out11a" \
+    && grep -q 'ddl-guard/SKILL.md' "$TMP/out11a"; then
+    ok "NC11a R6 opencode 清单漏报检出"
+else
+    bad "NC11a 期望 rc=1+R6+ddl-guard, 实际 rc=${_rc11a}: $(cat "$TMP/out11a")"
+fi
+
+# R6 修绿：补回缺失条目后同一夹具转绿（证明检出项可修复、非结构性拒判）
+cat >"$NC11A/.opencode/opencode.json" <<'EOF'
+{
+  "instructions": [
+    "skills/ddl-guard/SKILL.md",
+    "steering/testing-standards.md",
+    "steering/report-standards.md"
+  ]
+}
+EOF
+if "$PY" tools/check_doc_freshness.py "$NC11A" >"$TMP/out11a2" 2>&1; then
+    ok "NC11a2 R6 补条目后修绿"
+else
+    bad "NC11a2 修绿后期望 rc=0: $(cat "$TMP/out11a2")"
+fi
+
+# R7a 漏报：CONTRIBUTING 目录树缺 steering 顶层文件
+NC11B="$TMP/nc11b"; nc11_setup "$NC11B"
+grep -v 'report-standards.md' "$NC11B/CONTRIBUTING.md" \
+    >"$NC11B/CONTRIBUTING.md.tmp" && mv "$NC11B/CONTRIBUTING.md.tmp" \
+    "$NC11B/CONTRIBUTING.md"
+if "$PY" tools/check_doc_freshness.py "$NC11B" >"$TMP/out11b" 2>&1; then
+    _rc11b=0
+else
+    _rc11b=$?
+fi
+if [ "$_rc11b" -eq 1 ] && grep -q 'R7a' "$TMP/out11b" \
+    && grep -q 'report-standards.md' "$TMP/out11b"; then
+    ok "NC11b R7a 目录树漏报检出"
+else
+    bad "NC11b 期望 rc=1+R7a+report-standards.md, 实际 rc=${_rc11b}: $(cat "$TMP/out11b")"
+fi
+
+# R7c 漏报：审查清单行在但缺 /ddl-guard
+NC11C="$TMP/nc11c"; nc11_setup "$NC11C"
+echo 'parts.append("- 审查类任务可使用 自动检查")' \
+    >"$NC11C/hooks/load-steering.sh"
+if "$PY" tools/check_doc_freshness.py "$NC11C" >"$TMP/out11c" 2>&1; then
+    _rc11c=0
+else
+    _rc11c=$?
+fi
+if [ "$_rc11c" -eq 1 ] && grep -q 'R7c' "$TMP/out11c" \
+    && grep -q 'ddl-guard' "$TMP/out11c"; then
+    ok "NC11c R7c 审查清单漏报检出"
+else
+    bad "NC11c 期望 rc=1+R7c+ddl-guard, 实际 rc=${_rc11c}: $(cat "$TMP/out11c")"
+fi
+
+# ── NC23 doc-freshness R12 负控制：工具计数易腐陈述必须被拦下 ──
+# （夹具 README 树收录 skills/foo，隔离 R3——含 SKILL.md 的目录须在树内）
+NC23="$TMP/nc23"; nc10_setup "$NC23"
+# shellcheck disable=SC2016  # 字面 markdown 树，刻意单引号防展开
+printf '# T\n\n```\n├── skills\n│   ├── foo\n```\n' >"$NC23/README.md"
+printf '平台工具集（165+ 工具），经 mcporter CLI 代理调用。\n' >"$NC23/skills/foo/SKILL.md"
+if "$PY" tools/check_doc_freshness.py "$NC23" >"$TMP/out23" 2>&1; then
+    _rc23=0
+else
+    _rc23=$?
+fi
+if [ "$_rc23" -eq 1 ] && grep -q 'R12' "$TMP/out23" \
+    && grep -q '165+ 工具' "$TMP/out23"; then
+    ok "NC23 R12 工具计数检出"
+else
+    bad "NC23 期望 rc=1+R12+165+ 工具, 实际 rc=${_rc23}: $(cat "$TMP/out23")"
+fi
+
+# R12 数字后置形态：工具数量：165 个（CodeRabbit 复审 #7 补充形态）
+NC23C="$TMP/nc23c"; cp -r "$NC23" "$NC23C"
+printf '平台工具集工具数量：165 个，经 mcporter CLI 代理调用。\n' >"$NC23C/skills/foo/SKILL.md"
+if "$PY" tools/check_doc_freshness.py "$NC23C" >"$TMP/out23c" 2>&1; then
+    _rc23c=0
+else
+    _rc23c=$?
+fi
+if [ "$_rc23c" -eq 1 ] && grep -q 'R12' "$TMP/out23c"; then
+    ok "NC23c R12 数字后置形态检出"
+else
+    bad "NC23c 期望 rc=1+R12, 实际 rc=${_rc23c}: $(cat "$TMP/out23c")"
+fi
+
+# R12 修绿：改写为实时口径后同一夹具转绿（证明可修复、非结构性拒判）
+printf '平台工具集（上百工具，数量以 mcporter list 实时结果为准）。\n' \
+    >"$NC23/skills/foo/SKILL.md"
+if "$PY" tools/check_doc_freshness.py "$NC23" >"$TMP/out23b" 2>&1; then
+    ok "NC23b R12 修绿（实时口径放行）"
+else
+    bad "NC23b 期望 rc=0: $(cat "$TMP/out23b")"
+fi
+
+# 文件缺失跳过：无 .opencode/CONTRIBUTING/AGENTS/CLAUDE/hooks 面 → 整组
+# 跳过而非误报（NC10 最小仓本身即此形态，此处显式再证一次）
+NC11E="$TMP/nc11e"; nc10_setup "$NC11E"
+if "$PY" tools/check_doc_freshness.py "$NC11E" >"$TMP/out11e" 2>&1; then
+    ok "NC11e R6/R7 目标面缺失时跳过"
+else
+    bad "NC11e 缺面时期望 rc=0: $(cat "$TMP/out11e")"
+fi
+
+
+# ── NC14 git-sealing 负控制：R1/R2/R3 都会拦，中性形态不误报 ──────────
+# 夹具 = 临时 git 仓（含未密封 test_*.py + conftest 与登记表原件）。
+NC14="$TMP/nc14"; mkdir -p "$NC14/mylib/tests" "$NC14/tools"
+git init -q "$NC14"
+printf 'import subprocess\nsubprocess.run(["git", "init", "-q", "x"])\n' \
+    >"$NC14/mylib/tests/test_bad.py"
+mkdir -p "$NC14/scripts/tests"
+cat >"$NC14/scripts/tests/test_hermetic_git.py" <<'EOF'
+GIT_FIXTURE_CASES = []
+EOF
+cp tools/check_git_sealing.py "$NC14/tools/"
+git -C "$NC14" add -A
+if "$PY" tools/check_git_sealing.py "$NC14" >"$TMP/out14" 2>&1; then
+    bad "NC14 期望 rc=1（R1 未密封+R3 未登记），实际放行"
+else
+    if grep -q 'R1 conftest 未密封' "$TMP/out14" \
+       && grep -q 'R3 负控制登记缺' "$TMP/out14"; then
+        ok "NC14 R1（conftest 未密封）+R3（登记缺）被拦"
+    else
+        bad "NC14 输出缺 R1/R3 报告: $(cat "$TMP/out14")"
+    fi
+fi
+# R2：test*.sh 调 git 无顶层 unset
+printf '#!/bin/sh\ngit init -q x\n' >"$NC14/scripts/test_bad.sh"
+git -C "$NC14" add -A
+if "$PY" tools/check_git_sealing.py "$NC14" >"$TMP/out14b" 2>&1; then
+    bad "NC14b 期望 rc=1（R2 命中），实际放行"
+else
+    if grep -q 'R2 shell 未密封' "$TMP/out14b"; then
+        ok "NC14b R2（shell 未密封）被拦"
+    else
+        bad "NC14b 输出缺 R2: $(cat "$TMP/out14b")"
+    fi
+fi
+# 中性形态：密封 conftest + 登记完备 + shell 有 unset → 零误报
+cat >"$NC14/mylib/tests/conftest.py" <<'EOF'
+import os
+for _k in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+           "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR", "GIT_NAMESPACE"):
+    os.environ.pop(_k, None)
+EOF
+cat >"$NC14/scripts/tests/test_hermetic_git.py" <<'EOF'
+GIT_FIXTURE_CASES = [("mylib", "tests/test_bad.py::x")]
+EOF
+printf '#!/bin/sh\nunset GIT_DIR GIT_WORK_TREE\ngit init -q x\n' \
+    >"$NC14/scripts/test_bad.sh"
+git -C "$NC14" add -A
+if "$PY" tools/check_git_sealing.py "$NC14" >"$TMP/out14c" 2>&1; then
+    ok "NC14c 中性形态零误报（密封+登记+unset 全就位）"
+else
+    bad "NC14c 期望 rc=0, 实际: $(cat "$TMP/out14c")"
+fi
+# ── NC15 doc-freshness R8 负控制：分发闸枚举漂移必须被拦下 ──────────────
+# 夹具：NC10 最小仓叠加 tools/git 双文件面（yml pre-push 3 commands +
+# README 注记行）。2026-09-03 实证形态：pre-push 加第六闸/闸改名而注记
+# 不更新，reviewer 人工核对才发现——本条让闸数漂移机械化拦截。
+nc15_setup() {
+    _d=$1; _listed=$2   # _listed：注记行枚举段（全枚举=正控制，缺闸=负控制）
+    nc10_setup "$_d"
+    mkdir -p "$_d/tools/git"
+    cat >"$_d/tools/git/lefthook.yml" <<'EOF'
+commit-msg:
+  commands:
+    commitmsg:
+      run: x
+pre-push:
+  commands:
+    coverage-full:
+      run: x
+    tests:
+      run: x
+    # 段内注释行复刻真实 yml 形态（注释跳过分支不靠主仓运行偶然覆盖）
+    sourcery-gate:
+      run: x
+  # pre-push 下非 commands 的 2 空格键挂 4 空格子键：不得误收为 command
+  # （正控注记只列 3 闸，若误收 LEASE_TOKEN 正控即红——R8 状态机负控制）
+  env:
+    LEASE_TOKEN: x
+EOF
+    # shellcheck disable=SC2016  # 字面 markdown 反引号，刻意单引号防展开（双引号会真执行命令替换）
+    printf '> **pre-push 执行模型注记**：`lefthook.yml` pre-push 各 commands 并行执行：%s 同时跑。\n' \
+        "$_listed" >"$_d/tools/git/README.md"
+}
+
+# 正控制：注记全枚举 → 整门 rc=0（含 R8 对真形态无误报）
+NC15="$TMP/nc15"; nc15_setup "$NC15" 'coverage-full / tests / sourcery-gate'
+if "$PY" tools/check_doc_freshness.py "$NC15" >"$TMP/out15" 2>&1; then
+    ok "NC15 干净 fixture 全绿（R8 注记全枚举无误报）"
+else
+    bad "NC15 干净 fixture 期望 rc=0: $(cat "$TMP/out15")"
+fi
+
+# 漏闸：注记缺 tests（新增/改名闸不更新注记的漂移形态）
+NC15A="$TMP/nc15a"; nc15_setup "$NC15A" 'coverage-full / sourcery-gate'
+if "$PY" tools/check_doc_freshness.py "$NC15A" >"$TMP/out15a" 2>&1; then
+    _rc15a=0
+else
+    _rc15a=$?
+fi
+if [ "$_rc15a" -eq 1 ] && grep -q 'R8' "$TMP/out15a" \
+    && grep -q '缺 pre-push command tests' "$TMP/out15a"; then
+    ok "NC15a R8 注记缺闸检出"
+else
+    bad "NC15a 期望 rc=1+R8+缺 tests, 实际 rc=${_rc15a}: $(cat "$TMP/out15a")"
+fi
+
+# 注记行整体删除：枚举面消失本身即漂移（不得静默跳过）
+NC15B="$TMP/nc15b"; nc15_setup "$NC15B" 'coverage-full / tests / sourcery-gate'
+printf '# Git 工具\n' >"$NC15B/tools/git/README.md"
+if "$PY" tools/check_doc_freshness.py "$NC15B" >"$TMP/out15b" 2>&1; then
+    _rc15b=0
+else
+    _rc15b=$?
+fi
+if [ "$_rc15b" -eq 1 ] && grep -q 'R8' "$TMP/out15b" \
+    && grep -q '注记行未找到' "$TMP/out15b"; then
+    ok "NC15b R8 注记行删除检出（枚举面消失即漂移）"
+else
+    bad "NC15b 期望 rc=1+R8+未找到, 实际 rc=${_rc15b}: $(cat "$TMP/out15b")"
+fi
+
+# 无 pre-push 段：yml 存在但无闸面 → 整条跳过（与 R6/R7 缺面跳过同构）
+NC15C="$TMP/nc15c"; nc15_setup "$NC15C" 'x'
+cat >"$NC15C/tools/git/lefthook.yml" <<'EOF'
+commit-msg:
+  commands:
+    commitmsg:
+      run: x
+EOF
+if "$PY" tools/check_doc_freshness.py "$NC15C" >"$TMP/out15c" 2>&1; then
+    ok "NC15c R8 无 pre-push 段时整条跳过"
+else
+    bad "NC15c 无闸面期望 rc=0: $(cat "$TMP/out15c")"
+fi
+
+# ── NC16 lint-shellcheck 清单漂移锁：run_tests ↔ gauntlet 两处镜像一致 ──
+# scripts/run_tests.sh 的 lint-shellcheck 层文件清单镜像自 tools/gauntlet.sh
+# （权威清单），此前靠注释互指人工同步（2026-09-04 reviewer 建议）；本用例
+# 机械比对两处清单集合，gauntlet 侧增删文件而 run_tests 未同步即红。
+# 抽取口径：锚定 shellcheck 调用语句——非注释行含 `shellcheck tools/`
+# 即语句起点，到无续行符的语句尾行止，收集其间 tools/*.sh token。
+# 锚点用调用形态而非「lint-shellcheck」字样：2026-09-08 实证 doctor 的
+# FAIL 提示语含该字样，被旧锚点误判为清单起点致假红；run_tests 的段头
+# echo 同样只是段名，均非清单本身。
+_sc_list() {
+    awk '/shellcheck tools\// && $0 !~ /^[ \t]*#/ {_in=1}
+         _in && $0 !~ /^[ \t]*#/ { print
+               if ($0 !~ /\\$/) exit }' "$1" \
+      | grep -oE 'tools/[A-Za-z0-9_./-]+\.sh' | sort -u
+}
+_sc_g=$(_sc_list tools/gauntlet.sh)
+_sc_r=$(_sc_list scripts/run_tests.sh)
+if [ -n "$_sc_g" ] && [ "$_sc_g" = "$_sc_r" ]; then
+    # shellcheck disable=SC2086  # $_sc_g 是多行词表，按空白分词是意图
+    ok "NC16 lint-shellcheck 清单镜像一致（$(printf '%s\n' $_sc_g | wc -l | tr -d ' ') 文件）"
+else
+    bad "NC16 清单漂移：gauntlet[$_sc_g] vs run_tests[$_sc_r]"
+fi
+
+# 负控制：夹具副本删一文件 → 断言必须转红（证明比对有效，非恒真）
+NC16A="$TMP/nc16a"; mkdir -p "$NC16A"
+sed 's| tools/test_spec_check.sh||' scripts/run_tests.sh >"$NC16A/run_tests.sh"
+_sc_a=$(_sc_list "$NC16A/run_tests.sh")
+if [ -n "$_sc_a" ] && [ "$_sc_a" != "$_sc_g" ]; then
+    ok "NC16a 清单漂移检出（删一文件即不等）"
+else
+    bad "NC16a 期望漂移被检出: gauntlet[$_sc_g] vs 篡改[$_sc_a]"
+fi
+
+# 边界：清单语句内插注释（含 tools/*.sh 字样）不得截断抽取（防假红；
+# 注释行无续行符，未过滤会被误判为语句尾行。插入点随锚点改为调用行后）
+NC16B="$TMP/nc16b"; mkdir -p "$NC16B"
+awk '/^  if ! shellcheck tools\/gauntlet.sh/ {print; print "  # 注释探针 tools/fake-note.sh"; next} {print}' \
+    scripts/run_tests.sh >"$NC16B/run_tests.sh"
+_sc_b=$(_sc_list "$NC16B/run_tests.sh")
+if [ "$_sc_b" = "$_sc_g" ]; then
+    ok "NC16b 清单语句内注释不截断（抽取仍全集）"
+else
+    bad "NC16b 语句内注释致截断: gauntlet[$_sc_g] vs 探针[$_sc_b]"
+fi
+
+# 边界：含「lint-shellcheck」字样的 echo 提示语（doctor FAIL 消息形态）
+# 不作为抽取锚点（2026-09-08 实证假红根因：旧锚点按字样定位被误触发）
+NC16C="$TMP/nc16c"; mkdir -p "$NC16C"
+awk '/^    run_layer lint-shellcheck/ {print "  echo \"  FAIL shellcheck: 未安装（lint-shellcheck 探针）\" >&2"} {print}' \
+    tools/gauntlet.sh >"$NC16C/gauntlet.sh"
+_sc_c=$(_sc_list "$NC16C/gauntlet.sh")
+if [ "$_sc_c" = "$_sc_g" ]; then
+    ok "NC16c lint-shellcheck 提示语不误触清单抽取"
+else
+    bad "NC16c echo 探针致误判: gauntlet[$_sc_g] vs 探针[$_sc_c]"
+fi
+
+# ── NC17 tempdir-isolation 负控制：PR #137 泄漏断言原形必须被拦 ────────
+# 夹具经 heredoc 落盘到 $TMP（仓外、显式 file 参数直查模式）；本检查器
+# 扫描面仅 tracked 测试 .py（test_*.py / conftest.py），本脚本 .sh 不自匹配。
+mkdir -p "$TMP/nc17"
+cat >"$TMP/nc17/test_leak_bad.py" <<'EOF'
+import glob, os, tempfile
+from pathlib import Path
+
+glob.glob(os.path.join(tempfile.gettempdir(), ".factory-dist.*"))
+os.listdir("/tmp")
+list(Path("/tmp").iterdir())
+EOF
+if "$PY" tools/check_tempdir_usage.py "$TMP/nc17/test_leak_bad.py" >"$TMP/out17" 2>&1; then
+    _rc17=0
+else
+    _rc17=$?
+fi
+if [ "$_rc17" -eq 1 ] && grep -q 'R1' "$TMP/out17" && grep -q 'R2' "$TMP/out17"; then
+    ok "NC17 共享 tempdir 枚举击杀（R1 gettempdir + R2 /tmp 字面量）"
+else
+    bad "NC17 期望 rc=1+R1+R2, 实际 rc=${_rc17}, 输出: $(cat "$TMP/out17")"
+fi
+
+# NC17b 注入式隔离夹具放行：monkeypatch TMPDIR + 对注入目录 glob
+# （PR #137 修复范式原形）——检查器边界是共享目录观测，不是见 glob 就拦
+cat >"$TMP/nc17/test_leak_good.py" <<'EOF'
+import glob, os
+
+def test_no_leak(monkeypatch, private_tmp):
+    monkeypatch.setenv("TMPDIR", str(private_tmp))
+    assert sorted(glob.glob(os.path.join(os.environ["TMPDIR"], ".factory-dist.*"))) == []
+EOF
+if "$PY" tools/check_tempdir_usage.py "$TMP/nc17/test_leak_good.py" >"$TMP/out17b" 2>&1; then
+    ok "NC17b 注入式 private_tmp 夹具放行"
+else
+    bad "NC17b 期望 rc=0, 实际输出: $(cat "$TMP/out17b")"
+fi
+
+# NC17c 检查器损坏路径：rc=2 绝不算通过（NC6/NC8c/NC9c 同一语义）
+if "$PY" tools/check_tempdir_usage.py "$TMP/definitely-missing" >"$TMP/out17c" 2>&1; then
+    _rc17c=0
+else
+    _rc17c=$?
+fi
+if [ "$_rc17c" -eq 2 ]; then
+    ok "NC17c tempdir 检查器损坏路径 rc=2"
+else
+    bad "NC17c 期望 rc=2, 实际 rc=${_rc17c:-0}"
+fi
+
+# NC17d docstring/prose 示例文字豁免（PR #140 评论二）：规范转述里的
+# gettempdir()/"/tmp" 字面量示例不得误报——独立字符串语句整段掩蔽后扫描
+cat >"$TMP/nc17/test_doc_prose.py" <<'EOF'
+"""规范转述（负控制：文档示例文字不得误报）。
+
+违规形态示例（仅文档转述，非真实代码）：
+  sorted(glob.glob("/tmp/xxx-*"))
+  os.listdir("/tmp"); list(Path("/tmp").iterdir())
+  tempfile.gettempdir() 恒返回系统共享目录。
+真实断言对齐 private_tmp 注入目录。
+"""
+import glob
+
+
+def test_ok(tmp_path):
+    assert sorted(glob.glob(str(tmp_path / "*"))) == []
+EOF
+if "$PY" tools/check_tempdir_usage.py "$TMP/nc17/test_doc_prose.py" >"$TMP/out17d" 2>&1; then
+    ok "NC17d docstring/prose 示例文字豁免（无误报）"
+else
+    bad "NC17d 期望 rc=0, 实际输出: $(cat "$TMP/out17d")"
+fi
+
+# NC17e git 不可用（PATH 剥离，PR #140 评论一）：subprocess OSError 须
+# fail-closed rc=2，绝不因环境坏而静默通过
+mkdir -p "$TMP/nc17/empty-bin"
+_pypath="$(command -v "$PY" || true)"
+if env PATH="$TMP/nc17/empty-bin" "$_pypath" tools/check_tempdir_usage.py . >"$TMP/out17e" 2>&1; then
+    _rc17e=0
+else
+    _rc17e=$?
+fi
+if [ "$_rc17e" -eq 2 ]; then
+    ok "NC17e git 不可用 fail-closed rc=2"
+else
+    bad "NC17e 期望 rc=2, 实际 rc=${_rc17e}, 输出: $(cat "$TMP/out17e")"
+fi
+
+# NC17f R1 标识符边界（CodeRabbit PR #140）：fake_gettempdir() 等本地助手
+# 不调真实 API——旧正则按子串误命中判 rc=1，收紧后须放行
+cat >"$TMP/nc17/test_r1_ident.py" <<'EOF'
+def fake_gettempdir():
+    return "/srv/scratch"
+
+
+def test_helper_only():
+    assert fake_gettempdir()
+EOF
+if "$PY" tools/check_tempdir_usage.py "$TMP/nc17/test_r1_ident.py" >"$TMP/out17f" 2>&1; then
+    ok "NC17f R1 标识符边界（fake_gettempdir 放行，真实 API 仍由 NC17 拦）"
+else
+    bad "NC17f 期望 rc=0, 实际输出: $(cat "$TMP/out17f")"
+fi
+
+# NC17g 现存非 git 目录（CodeRabbit PR #140）：不同于 NC17c 不存在路径
+# （main 早退），须真实走到 tracked_test_files 的 rev-parse fail-closed 分支。
+# 夹具不能放 $TMP 下——NC1 已 git init "$TMP"，其内目录必在 worktree 中。
+_nc17g_plain=$(mktemp -d)
+if "$PY" tools/check_tempdir_usage.py "$_nc17g_plain" >"$TMP/out17g" 2>&1; then
+    _rc17g=0
+else
+    _rc17g=$?
+fi
+rm -rf "$_nc17g_plain"
+if [ "$_rc17g" -eq 2 ]; then
+    ok "NC17g 现存非 git 目录 fail-closed rc=2"
+else
+    bad "NC17g 期望 rc=2, 实际 rc=${_rc17g}, 输出: $(cat "$TMP/out17g")"
+fi
+
+# ── NC18 doc-freshness R9 负控制：commitlint scope 三面漂移必须被拦 ────
+# 在 NC10 最小仓上加 R9 面：根 commitlint.config.js（权威枚举，多行数组
+# 含注释——与真实形态一致）、分发件 .cjs（单行、带「下游」标注）、
+# git-conventions.md scope 表（含 '/' 指针格不参与枚举比对）、
+# 带 SKILL.md 的技能目录（锚定规则 a）。
+nc18_setup() {
+    _d=$1
+    nc10_setup "$_d"
+    mkdir -p "$_d/skills/ddl-guard" "$_d/steering" "$_d/tools/git"
+    printf -- '---\nname: ddl-guard\ndescription: t\n---\n' \
+        >"$_d/skills/ddl-guard/SKILL.md"
+    {
+        echo '# T'
+        echo '```'
+        echo '├── skills/'
+        echo '│   ├── foo/'
+        echo '│   └── ddl-guard/'
+        echo '```'
+    } >"$_d/README.md"
+    cat >"$_d/commitlint.config.js" <<'EOF'
+module.exports = {
+  rules: {
+    'scope-enum': [1, 'always', [
+      'api', 'ci',                    // 业务域
+      'ddl-guard',                    // 技能
+      'tools',                        // 工程
+    ]],
+  },
+};
+EOF
+    printf "// 下游通用子集\nmodule.exports = { rules: { 'scope-enum': [1, 'always', ['api', 'ci']] } };\n" \
+        >"$_d/tools/git/commitlint.config.cjs"
+    cat >"$_d/steering/git-conventions.md" <<'EOF'
+### scope（可选）
+
+| 类别 | scope |
+| --- | --- |
+| 业务域 | `api`、`ci` |
+| 技能 | `skills/`（指针行——各技能 scope 由根 `commitlint.config.js` 自动包含） |
+| 工程 | `tools` |
+EOF
+}
+
+NC18="$TMP/nc18"; nc18_setup "$NC18"
+if "$PY" tools/check_doc_freshness.py "$NC18" >"$TMP/o18" 2>&1; then
+    ok "NC18 干净 fixture 全绿（R9 三面一致）"
+else
+    bad "NC18 干净 fixture 期望 rc=0: $(cat "$TMP/o18")"
+fi
+
+# R9a 漏报：skills/ddl-guard 有 SKILL.md 但根枚举漏注册
+NC18A="$TMP/nc18a"; nc18_setup "$NC18A"
+"$PY" -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1]); p.write_text("".join(x for x in p.read_text(encoding="utf-8").splitlines(True) if "ddl-guard" not in x), encoding="utf-8")' "$NC18A/commitlint.config.js"
+if "$PY" tools/check_doc_freshness.py "$NC18A" >"$TMP/o18a" 2>&1; then
+    _rc18a=0
+else
+    _rc18a=$?
+fi
+if [ "$_rc18a" -eq 1 ] && grep -q 'R9' "$TMP/o18a" && grep -q 'ddl-guard' "$TMP/o18a"; then
+    ok "NC18a R9 技能漏注册检出"
+else
+    bad "NC18a 期望 rc=1+R9+ddl-guard, 实际 rc=${_rc18a}: $(cat "$TMP/o18a")"
+fi
+
+# R9b 漏报：根枚举含 scope 表未登记的值（mystery 非技能名也非表内值）
+NC18B="$TMP/nc18b"; nc18_setup "$NC18B"
+sed -i '' "s/'api', 'ci',/'api', 'ci', 'mystery',/" "$NC18B/commitlint.config.js"
+if "$PY" tools/check_doc_freshness.py "$NC18B" >"$TMP/o18b" 2>&1; then
+    _rc18b=0
+else
+    _rc18b=$?
+fi
+if [ "$_rc18b" -eq 1 ] && grep -q 'R9' "$TMP/o18b" && grep -q 'mystery' "$TMP/o18b"; then
+    ok "NC18b R9 规范表缺枚举值检出"
+else
+    bad "NC18b 期望 rc=1+R9+mystery, 实际 rc=${_rc18b}: $(cat "$TMP/o18b")"
+fi
+
+# R9b 反向：规范表声明了根枚举外的值（ghost 不在权威枚举内）
+NC18C="$TMP/nc18c"; nc18_setup "$NC18C"
+# shellcheck disable=SC2016  # python 字面反引号，刻意单引号防 shell 展开
+"$PY" - "$NC18C/steering/git-conventions.md" <<'PYEOF'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+p.write_text(p.read_text(encoding="utf-8").replace(
+    "`api`、`ci`", "`api`、`ci`、`ghost`"), encoding="utf-8")
+PYEOF
+grep -q 'ghost' "$NC18C/steering/git-conventions.md" \
+    || bad "NC18c 夹具注入失败（ghost 未写入）"
+if "$PY" tools/check_doc_freshness.py "$NC18C" >"$TMP/o18c" 2>&1; then
+    _rc18c=0
+else
+    _rc18c=$?
+fi
+if [ "$_rc18c" -eq 1 ] && grep -q 'R9' "$TMP/o18c" && grep -q 'ghost' "$TMP/o18c"; then
+    ok "NC18c R9 表声明枚举外值检出"
+else
+    bad "NC18c 期望 rc=1+R9+ghost, 实际 rc=${_rc18c}: $(cat "$TMP/o18c")"
+fi
+
+# R9c 漏报：分发件 .cjs 缺「下游」定位标注
+NC18D="$TMP/nc18d"; nc18_setup "$NC18D"
+printf "module.exports = { rules: { 'scope-enum': [1, 'always', ['api', 'ci']] } };\n" \
+    >"$NC18D/tools/git/commitlint.config.cjs"
+if "$PY" tools/check_doc_freshness.py "$NC18D" >"$TMP/o18d" 2>&1; then
+    _rc18d=0
+else
+    _rc18d=$?
+fi
+if [ "$_rc18d" -eq 1 ] && grep -q 'R9' "$TMP/o18d" && grep -q '下游' "$TMP/o18d"; then
+    ok "NC18d R9 分发件缺下游标注检出"
+else
+    bad "NC18d 期望 rc=1+R9+下游, 实际 rc=${_rc18d}: $(cat "$TMP/o18d")"
+fi
+
+# NC18e R9 fail-closed 路径 1：根 .js 结构损坏（无 ']]' 闭合）须报解析失败
+NC18E="$TMP/nc18e"; nc18_setup "$NC18E"
+"$PY" - "$NC18E/commitlint.config.js" <<'PYEOF'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+p.write_text(p.read_text(encoding="utf-8").replace("]],", ""), encoding="utf-8")
+PYEOF
+if "$PY" tools/check_doc_freshness.py "$NC18E" >"$TMP/o18e" 2>&1; then
+    _rc18e=0
+else
+    _rc18e=$?
+fi
+if [ "$_rc18e" -eq 1 ] && grep -q 'R9' "$TMP/o18e" && grep -q '解析失败' "$TMP/o18e"; then
+    ok "NC18e R9 根配置结构损坏检出（fail-closed 解析失败路径）"
+else
+    bad "NC18e 期望 rc=1+R9+解析失败, 实际 rc=${_rc18e}: $(cat "$TMP/o18e")"
+fi
+
+# NC18f R9 fail-closed 路径 2：规范表缺 '### scope' 段须报表未找到
+NC18F="$TMP/nc18f"; nc18_setup "$NC18F"
+"$PY" - "$NC18F/steering/git-conventions.md" <<'PYEOF'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+p.write_text(p.read_text(encoding="utf-8").replace("### scope", "### 范围"), encoding="utf-8")
+PYEOF
+if "$PY" tools/check_doc_freshness.py "$NC18F" >"$TMP/o18f" 2>&1; then
+    _rc18f=0
+else
+    _rc18f=$?
+fi
+if [ "$_rc18f" -eq 1 ] && grep -q 'R9' "$TMP/o18f" && grep -q '未找到' "$TMP/o18f"; then
+    ok "NC18f R9 scope 表缺失检出（fail-closed 表未找到路径）"
+else
+    bad "NC18f 期望 rc=1+R9+未找到, 实际 rc=${_rc18f}: $(cat "$TMP/o18f")"
+fi
+
+# NC18g R9 fail-closed 路径 3：分发件 .cjs 结构漂移（双引号重排）须报解析失败
+# （复审 🟠-1：解析失败/空枚举曾静默跳过子集与「下游」校验）
+NC18G="$TMP/nc18g"; nc18_setup "$NC18G"
+printf '// 下游通用子集\nmodule.exports = { rules: { "scope-enum": [1, "always", ["api", "ci"]] } };\n' \
+    >"$NC18G/tools/git/commitlint.config.cjs"
+if "$PY" tools/check_doc_freshness.py "$NC18G" >"$TMP/o18g" 2>&1; then
+    _rc18g=0
+else
+    _rc18g=$?
+fi
+if [ "$_rc18g" -eq 1 ] && grep -q 'R9' "$TMP/o18g" && grep -q '解析失败' "$TMP/o18g"; then
+    ok "NC18g R9 分发件结构漂移检出（fail-closed 解析失败路径）"
+else
+    bad "NC18g 期望 rc=1+R9+解析失败, 实际 rc=${_rc18g}: $(cat "$TMP/o18g")"
+fi
+
+# ── NC19 diff-cover 负控制：变更行覆盖率不足必须被拦 ──────────────────
+# NC18 编号已被 R9 技能注册检查占用，本组顺延 NC19。
+NC19_TOOLS=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+# 夹具 = 临时 git 仓 + 真实 coverage 产物（coverage run 生成 .coverage，不经
+# 手写 XML——专测本门实际核算链路）。base 分支上 m.py 仅 1 行；工作区扩展出
+# 未被调用的 uncovered()（2 行未覆盖变更行）→ diff 覆盖率 4/6 < 90% 应 rc=1。
+NC19="$TMP/nc19"; mkdir -p "$NC19"
+git init -q -b base "$NC19"
+printf 'x = 1\n' >"$NC19/m.py"
+git -C "$NC19" add -A && git -C "$NC19" commit -qm base
+git -C "$NC19" checkout -q -b work
+cat >"$NC19/m.py" <<'EOF'
+x = 1
+
+def main():
+    pass
+
+def uncovered():
+    y = 2
+    z = 3
+
+main()
+EOF
+git -C "$NC19" commit -qam wip
+(cd "$NC19" && "$PY" -m coverage run m.py)
+if (cd "$NC19" && GAUNTLET_PY="$PY" DIFF_COVER_BASE=base \
+    "$NC19_TOOLS/run_diff_cover.sh" "$NC19") >"$TMP/out19" 2>&1; then
+    _rc19=0
+else
+    _rc19=$?
+fi
+if [ "$_rc19" -eq 1 ] && grep -q 'm.py' "$TMP/out19"; then
+    ok "NC19 变更行覆盖率不足被拦且指明文件（rc=1）"
+else
+    bad "NC19 期望 rc=1 且报告含 m.py, 实际 rc=${_rc19}: $(head -5 "$TMP/out19")"
+fi
+
+# NC19b 正控制：同构夹具去掉未覆盖变更行 → 全覆盖 rc=0（证明放行链路可走通）
+NC19B="$TMP/nc19b"; mkdir -p "$NC19B"
+git init -q -b base "$NC19B"
+printf 'x = 1\n' >"$NC19B/m.py"
+git -C "$NC19B" add -A && git -C "$NC19B" commit -qm base
+git -C "$NC19B" checkout -q -b work
+cat >"$NC19B/m.py" <<'EOF'
+x = 1
+
+def main():
+    pass
+
+main()
+EOF
+git -C "$NC19B" commit -qam wip
+(cd "$NC19B" && "$PY" -m coverage run m.py)
+if (cd "$NC19B" && GAUNTLET_PY="$PY" DIFF_COVER_BASE=base \
+    "$NC19_TOOLS/run_diff_cover.sh" "$NC19B") >"$TMP/out19b" 2>&1; then
+    ok "NC19b 变更行全覆盖放行（rc=0）"
+else
+    bad "NC19b 期望 rc=0: $(head -5 "$TMP/out19b")"
+fi
+
+# NC19c 检查器损坏路径：无 .coverage 产物 rc=2 绝不算通过（NC6/NC7c 同语义）
+NC19C="$TMP/nc19c"; mkdir -p "$NC19C"
+if (cd "$NC19C" && GAUNTLET_PY="$PY" \
+    "$NC19_TOOLS/run_diff_cover.sh" "$NC19C") >"$TMP/out19c" 2>&1; then
+    _rc19c=0
+else
+    _rc19c=$?
+fi
+if [ "$_rc19c" -eq 2 ]; then
+    ok "NC19c 无覆盖率产物 fail-closed rc=2"
+else
+    bad "NC19c 期望 rc=2, 实际 rc=${_rc19c}"
+fi
+
+# ── NC20 md-link-check 研究档案负控制：登记漂移/模板违约必须被拦 ────────
+# docs/research/ 跟踪档案契约：README 登记 + frontmatter 三键 + 五必需章节
+# （2026-09-13 reviewer 建议接线：人肉登记必滞后，与 skills/steering/design
+# 三面同构）。夹具 = 真 git 仓（tracked 面语义同 NC1）。
+nc20_setup() {
+    _d=$1
+    git init -q "$_d"
+    mkdir -p "$_d/docs/research"
+    {
+        echo '# T'
+        echo
+        echo '| 项目 |'
+        echo '| --- |'
+        echo '| [foo](docs/research/foo.md) |'
+    } >"$_d/README.md"
+    cat >"$_d/docs/research/foo.md" <<'EOF'
+---
+last-checked: 2026-09-13
+re-check-trigger: t
+depth: README 级
+---
+
+# foo
+
+## 一句话定位
+
+t
+
+## 事实快照（2026-09-13）
+
+- t
+
+## 可借鉴点
+
+t
+
+## 不适配点 / 否决
+
+t
+
+## 资源链接
+
+- t
+EOF
+    git -C "$_d" add -A
+}
+
+# 正控制：登记完备 + 模板合规 → rc=0
+NC20="$TMP/nc20"; nc20_setup "$NC20"
+if "$PY" scripts/md_link_check.py "$NC20" >"$TMP/out20" 2>&1; then
+    ok "NC20 干净 fixture 全绿（登记+模板契约无误报）"
+else
+    bad "NC20 干净 fixture 期望 rc=0: $(cat "$TMP/out20")"
+fi
+
+# 登记漂移：新增合规档案但不登记 README → rc=1 且指明未登记
+NC20A="$TMP/nc20a"; nc20_setup "$NC20A"
+sed 's/^# foo/# bar/' "$NC20A/docs/research/foo.md" >"$NC20A/docs/research/bar.md"
+git -C "$NC20A" add -A
+if "$PY" scripts/md_link_check.py "$NC20A" >"$TMP/out20a" 2>&1; then
+    _rc20a=0
+else
+    _rc20a=$?
+fi
+if [ "$_rc20a" -eq 1 ] && grep -q '研究档案未登记 README 索引：docs/research/bar.md' "$TMP/out20a"; then
+    ok "NC20a 未登记档案检出"
+else
+    bad "NC20a 期望 rc=1+未登记 bar.md, 实际 rc=${_rc20a}: $(cat "$TMP/out20a")"
+fi
+
+# 模板违约 1：frontmatter 缺 re-check-trigger 键
+NC20B="$TMP/nc20b"; nc20_setup "$NC20B"
+grep -v '^re-check-trigger:' "$NC20B/docs/research/foo.md" \
+    >"$NC20B/docs/research/foo.md.tmp" \
+    && mv "$NC20B/docs/research/foo.md.tmp" "$NC20B/docs/research/foo.md"
+git -C "$NC20B" add -A
+if "$PY" scripts/md_link_check.py "$NC20B" >"$TMP/out20b" 2>&1; then
+    _rc20b=0
+else
+    _rc20b=$?
+fi
+if [ "$_rc20b" -eq 1 ] && grep -q 'frontmatter 缺 re-check-trigger' "$TMP/out20b"; then
+    ok "NC20b frontmatter 缺键检出"
+else
+    bad "NC20b 期望 rc=1+缺 re-check-trigger, 实际 rc=${_rc20b}: $(cat "$TMP/out20b")"
+fi
+
+# 模板违约 2：缺「资源链接」章节（其余全合规，证明章节校验独立生效）
+NC20C="$TMP/nc20c"; nc20_setup "$NC20C"
+grep -v '^## 资源链接' "$NC20C/docs/research/foo.md" \
+    >"$NC20C/docs/research/foo.md.tmp" \
+    && mv "$NC20C/docs/research/foo.md.tmp" "$NC20C/docs/research/foo.md"
+git -C "$NC20C" add -A
+if "$PY" scripts/md_link_check.py "$NC20C" >"$TMP/out20c" 2>&1; then
+    _rc20c=0
+else
+    _rc20c=$?
+fi
+if [ "$_rc20c" -eq 1 ] && grep -q '缺必需章节「资源链接」' "$TMP/out20c"; then
+    ok "NC20c 缺必需章节检出"
+else
+    bad "NC20c 期望 rc=1+缺资源链接, 实际 rc=${_rc20c}: $(cat "$TMP/out20c")"
+fi
+
+# 模板违约 3：frontmatter 整块缺失（覆盖「缺 frontmatter 三键」汇总分支）
+NC20D="$TMP/nc20d"; nc20_setup "$NC20D"
+sed '1,5d' "$NC20D/docs/research/foo.md" >"$NC20D/docs/research/foo.md.tmp" \
+    && mv "$NC20D/docs/research/foo.md.tmp" "$NC20D/docs/research/foo.md"
+git -C "$NC20D" add -A
+if "$PY" scripts/md_link_check.py "$NC20D" >"$TMP/out20d" 2>&1; then
+    _rc20d=0
+else
+    _rc20d=$?
+fi
+if [ "$_rc20d" -eq 1 ] && grep -q '缺 frontmatter 三键' "$TMP/out20d"; then
+    ok "NC20d frontmatter 整块缺失检出"
+else
+    bad "NC20d 期望 rc=1+缺 frontmatter, 实际 rc=${_rc20d}: $(cat "$TMP/out20d")"
+fi
+
+# 模板违约 4：键在但值为空（空键架空保鲜契约，非空才放行）
+NC20E="$TMP/nc20e"; nc20_setup "$NC20E"
+sed 's/^re-check-trigger: t$/re-check-trigger:/' "$NC20E/docs/research/foo.md" \
+    >"$NC20E/docs/research/foo.md.tmp" \
+    && mv "$NC20E/docs/research/foo.md.tmp" "$NC20E/docs/research/foo.md"
+git -C "$NC20E" add -A
+if "$PY" scripts/md_link_check.py "$NC20E" >"$TMP/out20e" 2>&1; then
+    _rc20e=0
+else
+    _rc20e=$?
+fi
+if [ "$_rc20e" -eq 1 ] && grep -q 'frontmatter 缺 re-check-trigger' "$TMP/out20e"; then
+    ok "NC20e 空值键不算存在检出"
+else
+    bad "NC20e 期望 rc=1+缺 re-check-trigger, 实际 rc=${_rc20e}: $(cat "$TMP/out20e")"
+fi
+
+# 模板违约 5：前缀变体键（re-check-trigger-x 不得冒充 re-check-trigger）
+NC20F="$TMP/nc20f"; nc20_setup "$NC20F"
+sed 's/^re-check-trigger:/re-check-trigger-x:/' "$NC20F/docs/research/foo.md" \
+    >"$NC20F/docs/research/foo.md.tmp" \
+    && mv "$NC20F/docs/research/foo.md.tmp" "$NC20F/docs/research/foo.md"
+git -C "$NC20F" add -A
+if "$PY" scripts/md_link_check.py "$NC20F" >"$TMP/out20f" 2>&1; then
+    _rc20f=0
+else
+    _rc20f=$?
+fi
+if [ "$_rc20f" -eq 1 ] && grep -q 'frontmatter 缺 re-check-trigger' "$TMP/out20f"; then
+    ok "NC20f 前缀变体键不冒充检出"
+else
+    bad "NC20f 期望 rc=1+缺 re-check-trigger, 实际 rc=${_rc20f}: $(cat "$TMP/out20f")"
+fi
+# ── NC21 sourcery-gate 订阅到期降级 / issue 硬拦双向（2026-09-13 live 实证）──
+# 到期输出形态为补匹配而来（原预判词全不命中，闸按设计拦死直到补匹配）；
+# 反向盯防两级收紧：issue 形态优先硬拦，认证词同现不降级。
+SGT="$TMP/nc21"; mkdir -p "$SGT/bin"
+SGT_GATE="$PWD/tools/git/lefthook/sourcery-gate.sh"
+: > "$SGT/.sourcery.yaml"   # opt-in 信号（gate 只查存在性）
+: > "$SGT/x.py"
+cat >"$SGT/bin/sourcery" <<'SHEOF'
+#!/bin/sh
+echo "The Sourcery CLI is not available with this tier of Sourcery."
+echo "Please upgrade at https://app.sourcery.ai"
+exit 1
+SHEOF
+chmod +x "$SGT/bin/sourcery"
+if (cd "$SGT" && PATH="$SGT/bin:$PATH" \
+        bash "$SGT_GATE" x.py) >"$TMP/out21" 2>&1; then
+    if grep -q '认证/订阅失效' "$TMP/out21"; then
+        ok "NC21 订阅到期形态显式降级放行（live 实证补匹配）"
+    else
+        bad "NC21 降级消息缺失: $(cat "$TMP/out21")"
+    fi
+else
+    bad "NC21 到期形态应降级 exit 0: $(cat "$TMP/out21")"
+fi
+cat >"$SGT/bin/sourcery" <<'SHEOF'
+#!/bin/sh
+echo "x.py:10: issue found"
+echo "2 issues found"
+exit 1
+SHEOF
+if (cd "$SGT" && PATH="$SGT/bin:$PATH" \
+        bash "$SGT_GATE" x.py) >"$TMP/out21b" 2>&1; then
+    bad "NC21b issue 形态应硬拦 rc!=0"
+else
+    if grep -q '存在未解决 issue' "$TMP/out21b"; then
+        ok "NC21b issue 形态硬拦（优先于降级，两级收紧保真）"
+    else
+        bad "NC21b 拦截提示缺失: $(cat "$TMP/out21b")"
+    fi
+fi
+
+
+# NC21c 混合形态（issue 计数 + 认证词同现）：issue 优先硬拦，不降级——
+# 两级收紧的核心回归面（评审 R2 P2）
+cat >"$SGT/bin/sourcery" <<'SHEOF'
+#!/bin/sh
+echo "error: unauthorized token expired"
+echo "x.py:10: issue found"
+echo "2 issues found"
+exit 1
+SHEOF
+if (cd "$SGT" && PATH="$SGT/bin:$PATH" \
+        bash "$SGT_GATE" x.py) >"$TMP/out21c" 2>&1; then
+    bad "NC21c 混合形态（issue+认证词）应硬拦 rc!=0"
+else
+    if grep -q '存在未解决 issue' "$TMP/out21c"; then
+        ok "NC21c 混合形态硬拦（issue 优先于降级）"
+    else
+        bad "NC21c 拦截提示缺失: $(cat "$TMP/out21c")"
+    fi
+fi
+
+
+# ── NC22 frontmatter-manifests 负控制：M1/M2 违规必须被拦，合法树放行 ───
+# 覆盖：M1 缺 scenario / M2 files 断链 / M2 路径逃逸 / M2 files 缺键 + 正控制。
+# 夹具为最小仓库（steering 两族 + 两个 skill），不依赖真仓状态。
+nc22_setup() {
+    # POSIX sh 无 local（SC3043），夹具目录经唯一变量名传递
+    nc22_dir="$1"
+    rm -rf "$nc22_dir"; mkdir -p "$nc22_dir/steering/gtsp" "$nc22_dir/skills/foo" "$nc22_dir/skills/bar"
+    printf -- '---\ntitle: 通用规范\nscenario: 设计\n---\n# 通用\n' >"$nc22_dir/steering/a.md"
+    printf -- '---\ntitle: 分层\nscenario: 编码\n---\n# 分层\n' >"$nc22_dir/steering/gtsp/b.md"
+    printf 'echo ok\n' >"$nc22_dir/skills/foo/run.sh"
+    printf -- '---\nname: foo\nfiles:\n  - run.sh\n---\n# foo\n' >"$nc22_dir/skills/foo/SKILL.md"
+    printf -- '---\nname: bar\nfiles: []\n---\n# bar\n' >"$nc22_dir/skills/bar/SKILL.md"
+}
+
+# NC22a M1 steering 缺 scenario
+NC22A="$TMP/nc22a"; nc22_setup "$NC22A"
+printf -- '---\ntitle: 缺场景\n---\n# x\n' >"$NC22A/steering/a.md"
+if "$PY" tools/check_frontmatter_manifests.py "$NC22A" >"$TMP/o22a" 2>&1; then
+    _rc22a=0
+else
+    _rc22a=$?
+fi
+if [ "$_rc22a" -eq 1 ] && grep -q 'M1' "$TMP/o22a" && grep -q 'scenario' "$TMP/o22a"; then
+    ok "NC22a M1 steering 缺 scenario 检出"
+else
+    bad "NC22a 期望 rc=1+M1+scenario, 实际 rc=${_rc22a}: $(cat "$TMP/o22a")"
+fi
+
+# NC22b M2 files 断链
+NC22B="$TMP/nc22b"; nc22_setup "$NC22B"
+printf -- '---\nname: foo\nfiles:\n  - gone.sh\n---\n# foo\n' >"$NC22B/skills/foo/SKILL.md"
+if "$PY" tools/check_frontmatter_manifests.py "$NC22B" >"$TMP/o22b" 2>&1; then
+    _rc22b=0
+else
+    _rc22b=$?
+fi
+if [ "$_rc22b" -eq 1 ] && grep -q 'M2' "$TMP/o22b" && grep -q '断链' "$TMP/o22b"; then
+    ok "NC22b M2 files 断链检出"
+else
+    bad "NC22b 期望 rc=1+M2+断链, 实际 rc=${_rc22b}: $(cat "$TMP/o22b")"
+fi
+
+# NC22c M2 路径逃逸（绝对路径与 .. 各一）
+NC22C="$TMP/nc22c"; nc22_setup "$NC22C"
+printf -- '---\nname: foo\nfiles:\n  - /etc/passwd\n  - ../escape.txt\n---\n# foo\n' >"$NC22C/skills/foo/SKILL.md"
+if "$PY" tools/check_frontmatter_manifests.py "$NC22C" >"$TMP/o22c" 2>&1; then
+    _rc22c=0
+else
+    _rc22c=$?
+fi
+if [ "$_rc22c" -eq 1 ] && grep -q '绝对路径' "$TMP/o22c" && grep -q '逃逸' "$TMP/o22c"; then
+    ok "NC22c M2 路径围栏（绝对路径 + .. 逃逸）检出"
+else
+    bad "NC22c 期望 rc=1+绝对路径+逃逸, 实际 rc=${_rc22c}: $(cat "$TMP/o22c")"
+fi
+
+# NC22d M2 files 缺键（迁移旁路封堵：声明不可静默缺失）
+NC22D="$TMP/nc22d"; nc22_setup "$NC22D"
+printf -- '---\nname: foo\n---\n# foo\n' >"$NC22D/skills/foo/SKILL.md"
+if "$PY" tools/check_frontmatter_manifests.py "$NC22D" >"$TMP/o22d" 2>&1; then
+    _rc22d=0
+else
+    _rc22d=$?
+fi
+if [ "$_rc22d" -eq 1 ] && grep -q 'M2' "$TMP/o22d" && grep -q '缺少 files' "$TMP/o22d"; then
+    ok "NC22d M2 files 缺键检出（迁移旁路封堵）"
+else
+    bad "NC22d 期望 rc=1+M2+缺少 files, 实际 rc=${_rc22d}: $(cat "$TMP/o22d")"
+fi
+
+# NC22e 正控制：合法树（含显式空 files）放行
+NC22E="$TMP/nc22e"; nc22_setup "$NC22E"
+if "$PY" tools/check_frontmatter_manifests.py "$NC22E" >"$TMP/o22e" 2>&1; then
+    ok "NC22e 合法 frontmatter 树放行（含 files: [] 显式空）"
+else
+    bad "NC22e 期望 rc=0, 实际 rc=$?: $(cat "$TMP/o22e")"
+fi
+
+# ── 汇总 ───────────────────────────────────────────────────────────────
+if [ "$fails" -gt 0 ]; then
+    echo "checker-self-test: $fails 项失败"
+    exit 1
+fi
+echo "checker-self-test: 全部通过"

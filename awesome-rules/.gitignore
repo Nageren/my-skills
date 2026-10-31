@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# 本地工具运行时产物（crush 会话 db/日志）
+.crush/
+
+# lefthook 分发产物（install.sh 拷贝 tools/git/lefthook/ 到业务项目；
+# 本仓库直接引用源目录，不产生此运行时目录）
+.lefthook/
+
+# macOS
+.DS_Store
+
+# Editor (personal settings)
+.vscode/
+.idea/
+*.pdf
+target/
+
+# Node（release 工具链 devDependencies 安装产物）
+node_modules/
+
+docs/design/architecture/
+**/.coverage*
+
+# remote-pi 本地会话数据（G5：运行时生成，不入库；.pi/ 含本机 relay 基建配置）
+.pi/
+docs/research/taskpkg-exp/probe-*/
+
+# skill-evo 运行时产物（replay 证据等）：默认忽略；replay-evidence/ 豁免——
+# 真实证据（stream-json 实测）经 release_guard EVIDENCE_ENROLLED 登记后可入库
+skills/skill-evo/artifacts/*
+!skills/skill-evo/artifacts/replay-evidence/
+
+# 本地开发 worktree 区（.dev/worktree/：gauntlet 并行验证等临时工作树，永不入库）
+.dev/

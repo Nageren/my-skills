@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b73e62f6-8341-4275-ac59-4df2619fe057",
+  "path": "awesome-rules",
+  "path_key": "awesome-rules",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "local",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

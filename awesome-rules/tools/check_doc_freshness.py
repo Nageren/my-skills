@@ -1,0 +1,687 @@
+#!/usr/bin/env python3
+"""check_doc_freshness — 实现↔文档一致性门禁（陈述 vs 事实）
+
+代码是事实，文档是陈述；两者的差（数字、清单、指向）此前只能靠人工
+审查发现。本门把审查实证逃逸过的漂移（计数/覆盖/枚举）+ 已踩坑断言
+机械化，让 gauntlet/run_tests 门禁自己拦漂移：
+
+  R3 结构树覆盖：根 README tree 区块的 skills 子目录名 ⊇ skills/
+     下所有含 SKILL.md 的目录；_shared 无 SKILL.md → 缺失仅 [INFO]
+  R4 技能测试数：skills/*/{README,SKILL}.md 中紧邻「测试」的数字
+     陈述（测试 N 项 / N 项测试 / （N 条））== 对应测试文件的
+     def test_ 计数。对应关系：陈述行内 markdown 链接指向具体
+     test_*.py 则只数该文件，否则聚合该技能全部 test_*.py；
+     找不到测试文件 → [INFO] 跳过
+  R5 交叉引用防复发（已踩坑断言，防回归）：
+     impact-guard SKILL/README 不得再出现「复用 arch-guard」；
+     「复用来源」行须指向实际存在的 vendored 路径（原 R5b 的
+     .factory README 断言随工厂于 2026-09-29 迁至 im47cn/awesome-factory）
+  R6 平台清单覆盖：.opencode/opencode.json 的 instructions ⊇
+     skills/*/SKILL.md 全集 ∪ steering 顶层 *.md 全集。opencode 是
+     枚举式注入清单，缺新技能/新规范即漂移；其余平台为 ./skills/
+     目录级声明，无枚举漂移面（文件不存在则整条跳过）
+  R7 枚举完整性（三处人工维护清单，文件缺失对应子项跳过）：
+     a. CONTRIBUTING.md 目录结构树（``` 围栏）中的 steering 文件 ⊇
+        steering/ 顶层 *.md
+     b. AGENTS.md / CLAUDE.md「通用设计规范」行枚举 ⊇ 各规范主题。
+        主题 = frontmatter title 去「规范/标准」尾缀；覆盖判定为
+        枚举 token（「——」后的、/，切分）与主题互为包含——容忍
+        「API 设计」对「Open API 设计」这类前后缀措辞差；行含
+        「等」明示枚举非穷尽，该行不查
+     c. hooks/load-steering.sh「审查类任务可使用」清单 ⊇ 全部
+        *-guard 技能
+  R8 分发闸枚举覆盖：tools/git/README.md 的 pre-push 执行模型注记行枚举的
+     command 名 ⊇ tools/git/lefthook.yml pre-push: commands 键全集
+     （行内按分隔符切 token 与命令名取交集，容忍多余措辞；加/删闸
+     不更新注记即漂移；yml 或 README 任一缺失则整条跳过）
+  R10 根钩子文档覆盖：CONTRIBUTING.md 钩子条目 ⊇ lefthook.yml 顶层
+     hook 段名（只查 ⊆，多写不罚；来源 2026-09-20 审计 D-01/D-07——
+     pre-commit 双门曾在全部钩子文档缺位且无同步防线）
+  R9 commitlint scope 枚举一致性：root commitlint.config.js 为权威，
+     a. 其 scope-enum ⊇ 全部含 SKILL.md 的技能目录名；b. steering/
+     git-conventions.md scope 表与权威枚举双向对齐（技能由指针行覆盖）；
+     c. 分发件 .cjs 枚举 ⊆ 根枚举 且 scope-enum 声明前注释标注「下游」
+     定位（有意最小子集，不要求全集；2026-09-08 狩猎实证三方漂移后
+     收敛的口径，同日独立审查 Y4 补子集性校验）；表 token 形态契约
+     与解析失败 fail-closed 语义见 rule_r9 注释
+  R11 总则句双源一致：AGENTS.md「标注【强制】的条款不可违反…」整句
+     须原样出现在 hooks/load-steering.sh 文本中（钩子在生成上下文的
+     Python 字符串里硬编码了第二份副本，任一侧修订未同步即漂移；
+     比较前两侧做转义形态还原，规避 shell/python 引号转义差异）
+  R12 技能工具计数禁令：skills/*/{SKILL,README}.md 禁止「N+ 工具 /
+     N 个工具」静态计数——外部 MCP/CLI 工具数随上游版本漂移，改写为
+     「数量以 <实时查询命令> 为准」（2026-09-24 审查实证：
+     alibabacloud-devops「165+ 工具」与自身「以 mcporter list 实时
+     为准」原则三处自相矛盾）
+
+豁免（误报控制，两条稳定通道）：
+  --allow REGEX（可重复）：正则 search 命中证据行（[级别] 文件:行 →
+  消息）即跳过该条——无源行的发现（如纯扫描型规则）用它做条目级豁免
+  行级：markdown 源行尾追加 <!-- doc-freshness:allow -->
+
+用法:
+  python3 tools/check_doc_freshness.py [repo_root] [--allow REGEX]
+
+退出码: 0=一致
+        1=有漂移（任一 FAIL）
+        2=结构性错误（repo_root 缺 README.md / skills 任一项
+          ——门自身不可判，fail-closed）
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import json
+import re
+import sys
+from pathlib import Path
+
+# frontmatter 解析单一事实源（本文件与 hooks/load-steering.sh 统一消费）
+import frontmatter_lib
+
+ALLOW_MARK = "<!-- doc-freshness:allow -->"
+
+# R4 陈述口径：三个形态都要求「项/条」做单位（覆盖率 95% 这类百分数
+# 天然不匹配）；模式 2 仅在行含「测试」时启用（见 rule_r4）
+R4_TESTED_RE = re.compile(r"测试\s*[（(]?\s*(\d+)\s*[)）]?\s*[项条个]")
+R4_PAREN_RE = re.compile(r"[（(]\s*(\d+)\s*[项条]\s*[)）]")
+R4_REVERSED_RE = re.compile(r"(\d+)\s*[项条]\s*测试")
+# R12 陈述口径：数字+可选加号/量词紧邻「工具」（165+ 工具 / 100 个工具），
+# 及数字后置形态（工具数量：165 个 / 工具 N 个）
+R12_TOOL_COUNT_RE = re.compile(r"\d+\s*\+?\s*个?\s*工具|工具[^，。\n]{0,6}?\d+\s*个")
+
+R5_REUSE_RE = re.compile(r"复用\s*arch-guard")
+
+# R8 陈述侧口径：注记行按分隔符切 token，与 pre-push command 名取交集
+R8_SPLIT_RE = re.compile(r"[\s/、，,`*（）()：:。；;]+")
+
+DEF_TEST_RE = re.compile(r"(?m)^\s*(?:async\s+)?def\s+test_")
+
+# R11 总则句锚点：AGENTS.md 使用原则下的强度总则句（hooks 侧硬编码第二份副本）
+R11_SENTINEL = "标注【强制】的条款不可违反"
+
+
+def _lines(path: Path) -> list[str]:
+    return path.read_text(encoding="utf-8").splitlines()
+
+
+def _fence_blocks(lines: list[str]) -> list[tuple[int, list[str]]]:
+    """提取 ``` 围栏区块 → [(起始行号, 区块行, ...)]（未闭合尾块算到文末）。
+
+    R3/R7a 共用：起始行号为围栏内第一行的行号。
+    """
+    segs: list[tuple[int, list[str]]] = []
+    inside, start = False, 0
+    for i, ln in enumerate(lines, 1):
+        if ln.strip().startswith("```"):
+            if inside:
+                segs.append((start, lines[start - 1:i - 1]))
+            else:
+                start = i + 1
+            inside = not inside
+    if inside:
+        segs.append((start, lines[start - 1:]))
+    return segs
+
+
+class Gate:
+    def __init__(self) -> None:
+        self.findings: list[tuple[str, str, str]] = []  # (level, where, msg)
+
+    def fail(self, where: str, msg: str) -> None:
+        self.findings.append(("FAIL", where, msg))
+
+    def info(self, where: str, msg: str) -> None:
+        self.findings.append(("INFO", where, msg))
+
+
+def rule_r3(root: Path, g: Gate) -> None:
+    """R3 根 README 结构树 ⊇ 含 SKILL.md 的技能目录。"""
+    skills = root / "skills"
+    actual = {d.name for d in skills.iterdir()
+              if d.is_dir() and (d / "SKILL.md").is_file()}
+
+    segs = _fence_blocks(_lines(root / "README.md"))
+
+    tree_line: int | None = None
+    tree_names: list[str] = []
+    for seg_start, seg in segs:
+        for j, ln in enumerate(seg):
+            if re.match(r"\s*[├└]──\s*skills/?(\s|#|$)", ln):
+                tree_line = seg_start + j
+                for cont in seg[j + 1:]:
+                    if not cont.startswith("│"):
+                        break
+                    if (
+                        name := re.sub(r"^[│├└─\s]+", "", cont.split("#")[0])
+                        .strip()
+                        .rstrip("/")
+                    ):
+                        tree_names.append(name)
+                break
+        if tree_line is not None:
+            break
+
+    if tree_line is None:
+        if actual:
+            g.fail("README.md:1",
+                   f"R3 结构树未找到 skills 区块（{len(actual)} 个含 SKILL.md 的技能未被覆盖）")
+        return
+    for name in tree_names:
+        if not (skills / name).is_dir():
+            g.fail(f"README.md:{tree_line}",
+                   f"R3 结构树列出不存在的技能目录 {name}")
+    for name in sorted(actual - set(tree_names)):
+        g.fail(f"README.md:{tree_line}",
+               f"R3 结构树缺少技能目录 {name}")
+    shared = skills / "_shared"
+    if shared.is_dir() and not (shared / "SKILL.md").is_file() \
+            and "_shared" not in tree_names:
+        g.info(f"README.md:{tree_line}",
+               "R3 建议在结构树列出 _shared（无 SKILL.md，不强制）")
+
+
+def _count_def_test(path: Path) -> int:
+    return len(DEF_TEST_RE.findall(path.read_text(encoding="utf-8")))
+
+
+def rule_r4(root: Path, g: Gate) -> None:
+    """R4 技能测试数对账：行内点名测试文件则只数该文件，否则聚合。"""
+    skills = root / "skills"
+    mds = sorted(skills.glob("*/README.md")) + sorted(skills.glob("*/SKILL.md"))
+    for md in mds:
+        rel = md.relative_to(root).as_posix()
+        lines = _lines(md)
+        claims: list[tuple[int, int]] = []
+        for i, ln in enumerate(lines, 1):
+            if "测试" not in ln:
+                continue
+            for pat in (R4_TESTED_RE, R4_PAREN_RE, R4_REVERSED_RE):
+                claims += [(i, int(m.group(1))) for m in pat.finditer(ln)]
+        if not claims:
+            continue
+
+        # 对应关系：陈述行 markdown 链接指向的 test_*.py 优先（arch-guard
+        # 「（53 条）」点名单文件的口径）；点不名则聚合技能全部 test_*.py
+        named: list[Path] = []
+        for i, _ in claims:
+            for target in re.findall(r"\]\(([^)\s]+\.py)\)", lines[i - 1]):
+                p = (md.parent / target).resolve()
+                if p.is_file() and p.name.startswith("test_"):
+                    named.append(p)
+        scope = sorted(set(named)) if named else sorted(md.parent.rglob("test_*.py"))
+        if not scope:
+            for i, n in claims:
+                g.info(f"{rel}:{i}",
+                       f"R4 陈述 测试 {n} 但技能目录内未找到 test_*.py（跳过）")
+            continue
+        count = sum(_count_def_test(p) for p in scope)
+        scope_desc = ", ".join(p.name for p in scope)
+        for i, n in sorted(set(claims)):
+            if n != count:
+                g.fail(f"{rel}:{i}",
+                       f"R4 测试数 陈述 {n} vs 实际 {count}（{scope_desc}）")
+
+
+def rule_r5(root: Path, g: Gate) -> None:
+    """R5 交叉引用防复发：已踩坑断言。"""
+    for rel in ("skills/impact-guard/SKILL.md", "skills/impact-guard/README.md"):
+        p = root / rel
+        if not p.is_file():
+            continue
+        for i, ln in enumerate(_lines(p), 1):
+            if R5_REUSE_RE.search(ln):
+                g.fail(f"{rel}:{i}",
+                       "R5 禁用表述「复用 arch-guard」（实际依赖 vendored 快照，防复发）")
+            if "复用来源" in ln:
+                m = re.search(r"\]\(([^)\s]+)\)", ln)
+                target = m[1] if m else None
+                if target is None:
+                    bk = re.search(r"`([^`\s]+)`", ln)
+                    if bk and ("/" in bk[1] or bk[1].endswith(".py")):
+                        target = bk[1]
+                if target is None:
+                    g.info(f"{rel}:{i}",
+                           "R5 复用来源行未解析出路径（口径变更请同步本门规则）")
+                elif not (p.parent / target).resolve().exists():
+                    g.fail(f"{rel}:{i}",
+                           f"R5 复用来源指向不存在路径 {target}")
+                elif "_vendored" not in target:
+                    g.fail(f"{rel}:{i}",
+                           f"R5 复用来源须指向 _vendored 路径（实际 {target}）")
+
+
+def rule_r6(root: Path, g: Gate) -> None:
+    """R6 平台清单覆盖：opencode instructions ⊇ 技能 ∪ steering 顶层。"""
+    oc = root / ".opencode" / "opencode.json"
+    if not oc.is_file():
+        return  # 未装 opencode 适配即无枚举面（其余平台为目录级声明）
+    skills = root / "skills"
+    required = {f"skills/{d.name}/SKILL.md" for d in skills.iterdir()
+                if d.is_dir() and (d / "SKILL.md").is_file()}
+    required |= {f"steering/{p.name}" for p in (root / "steering").glob("*.md")}
+    text = oc.read_text(encoding="utf-8")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        g.fail(".opencode/opencode.json:1", f"R6 opencode.json 解析失败（{e}）")
+        return
+    entries = data.get("instructions") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        g.fail(".opencode/opencode.json:1", "R6 opencode.json 缺 instructions 数组")
+        return
+    key = re.search(r'(?m)^\s*"instructions"', text)
+    line = text[:key.start()].count("\n") + 1 if key else 1
+    for rel in sorted(required - {e for e in entries if isinstance(e, str)}):
+        g.fail(f".opencode/opencode.json:{line}",
+               f"R6 instructions 缺 {rel}（须 ⊇ skills/*/SKILL.md ∪ steering 顶层 *.md）")
+
+
+def _steering_topic(path: Path) -> str | None:
+    """steering 规范 frontmatter title → 主题词（去「规范/标准」尾缀）。
+
+    解析口径统一到 tools/frontmatter_lib.py 单一事实源（2026-09 病灶修复：
+    本函数曾与 hooks/load-steering.sh 各持一份解析逻辑靠注释对齐）。
+    无 title 返回 None（调用方跳过该文件）。
+    """
+    title = frontmatter_lib.simple_fields(path.read_text(encoding="utf-8")).get("title")
+    return re.sub(r"(规范|标准)$", "", title) if title else None
+
+
+def rule_r7(root: Path, g: Gate) -> None:
+    """R7 枚举完整性：三处人工维护清单各自 ⊇ 实际集合。"""
+    steering = sorted((root / "steering").glob("*.md"))
+    top = [p.name for p in steering]
+
+    # a. CONTRIBUTING.md 目录结构树（``` 围栏）中的 steering 文件
+    contributing = root / "CONTRIBUTING.md"
+    if contributing.is_file():
+        tree: tuple[int, list[str]] | None = None
+        for seg_start, seg in _fence_blocks(_lines(contributing)):
+            for j, ln in enumerate(seg):
+                stem = re.sub(r"^[│├└─\s]+", "", ln.split("#")[0]).strip().rstrip("/")
+                if stem == "steering":
+                    tree = (seg_start + j, seg)
+                    break
+            if tree:
+                break
+        if tree is None:
+            if top:
+                g.fail("CONTRIBUTING.md:1",
+                       f"R7a 结构树未找到 steering 区块（{len(top)} 个顶层规范未被覆盖）")
+        else:
+            body = "\n".join(tree[1])
+            for name in top:
+                if name not in body:
+                    g.fail(f"CONTRIBUTING.md:{tree[0]}",
+                           f"R7a 目录树缺 steering 顶层文件 {name}")
+
+    # b. AGENTS.md / CLAUDE.md「通用设计规范」行枚举 ⊇ 各规范主题
+    for rel in ("AGENTS.md", "CLAUDE.md"):
+        p = root / rel
+        if not p.is_file():
+            continue
+        hit = False
+        for i, ln in enumerate(_lines(p), 1):
+            if "通用设计规范" not in ln:
+                continue
+            hit = True
+            if "等" in ln:
+                # 「等」明示枚举非穷尽，硬对齐必误报 → 该行不查
+                continue
+            # 覆盖口径：枚举 token（「——」后按 、/，切分）与主题互为包含，
+            # 容忍「API 设计」对「Open API 设计」的前后缀措辞差
+            tokens = [t.strip(" `*（）()。：:")
+                      for t in re.split("[、，]", re.split("——", ln)[-1])]
+            for sp in steering:
+                topic = _steering_topic(sp)
+                if not topic:
+                    continue
+                if not any(len(t) >= 2 and (t in topic or topic in t)
+                           for t in tokens):
+                    g.fail(f"{rel}:{i}",
+                           f"R7b 枚举未提及主题「{topic}」（对应 steering/{sp.name}）")
+        if not hit and steering:
+            g.fail(f"{rel}:1", "R7b 未找到「通用设计规范」行")
+
+    # c. hooks/load-steering.sh「审查类任务可使用」清单 ⊇ 全部 *-guard 技能
+    hook = root / "hooks" / "load-steering.sh"
+    if hook.is_file():
+        guards = sorted(d.name for d in (root / "skills").iterdir()
+                        if d.is_dir() and d.name.endswith("-guard")
+                        and (d / "SKILL.md").is_file())
+        hit = False
+        for i, ln in enumerate(_lines(hook), 1):
+            if "审查类任务可使用" not in ln:
+                continue
+            hit = True
+            listed = set(re.findall(r"/([A-Za-z0-9-]+-guard)\b", ln))
+            for name in guards:
+                if name not in listed:
+                    g.fail(f"hooks/load-steering.sh:{i}",
+                           f"R7c 审查技能清单缺 /{name}（须含全部 *-guard 技能）")
+        if not hit and guards:
+            g.fail("hooks/load-steering.sh:1", "R7c 未找到「审查类任务可使用」清单行")
+
+
+def rule_r8(root: Path, g: Gate) -> None:
+    """R8 分发闸枚举覆盖：README 执行模型注记 ⊇ lefthook pre-push commands。"""
+    yml = root / "tools" / "git" / "lefthook.yml"
+    readme = root / "tools" / "git" / "README.md"
+    if not yml.is_file() or not readme.is_file():
+        return  # 无分发面即无枚举漂移面
+    # 事实侧：仅 pre-push 段内 2 空格 commands: 映射下的 4 空格键是 command
+    # （pre-push 下其它 2 空格键如 env: 挂的 4 空格子键不得误收；6 空格 run: 不匹配）
+    commands: list[str] = []
+    in_pre_push = False
+    in_commands = False
+    for ln in _lines(yml):
+        if ln.lstrip().startswith("#"):
+            continue
+        if re.match(r"^\S", ln):
+            if in_pre_push:
+                break  # 下一个顶层段，pre-push 结束
+            in_pre_push = ln.startswith("pre-push:")
+            continue
+        if not in_pre_push:
+            continue
+        if m2 := re.match(r"^  ([A-Za-z0-9][\w-]*):", ln):
+            in_commands = m2[1] == "commands"  # 2 空格键切换进出 commands 映射
+            continue
+        if in_commands:
+            if m4 := re.match(r"^    ([A-Za-z0-9][\w-]*):", ln):
+                commands.append(m4[1])
+    if not commands:
+        return  # 无 pre-push commands 即无注记枚举面
+    # 陈述侧：注记行切 token 与命令名取交集（只查 ⊇，多余措辞不罚）
+    note_line: int | None = None
+    note_text = ""
+    for i, ln in enumerate(_lines(readme), 1):
+        if "pre-push 执行模型注记" in ln:
+            note_line, note_text = i, ln
+            break
+    if note_line is None:
+        g.fail("tools/git/README.md:1",
+               f"R8 pre-push 执行模型注记行未找到（{len(set(commands))} 个 commands 未被枚举覆盖）")
+        return
+    listed = set(R8_SPLIT_RE.split(note_text)) & set(commands)
+    for name in sorted(set(commands)):
+        if name not in listed:
+            g.fail(f"tools/git/README.md:{note_line}",
+                   f"R8 执行模型注记缺 pre-push command {name}（lefthook.yml pre-push 共 {len(set(commands))} 闸）")
+
+
+def rule_r10(root: Path, g: Gate) -> None:
+    """R10 根钩子文档覆盖：lefthook.yml 顶层 hook 段名 ⊆ CONTRIBUTING.md 钩子条目。
+
+    事实侧取根 lefthook.yml 顶层段名（commit-msg / pre-commit / pre-push …），
+    陈述侧取 CONTRIBUTING.md 中 `- **<name>**` 形式的钩子条目；只查 ⊆（文档
+    多写不罚）。来源：2026-09-20 审计 D-01/D-07——pre-commit 两道门禁曾在
+    所有钩子文档中缺位，且无同步防线拦截该漂移。
+    """
+    yml = root / "lefthook.yml"
+    contrib = root / "CONTRIBUTING.md"
+    if not yml.is_file() or not contrib.is_file():
+        return  # 无根 hook 配置即无覆盖面
+    hooks: list[str] = []
+    for ln in _lines(yml):
+        if ln.lstrip().startswith("#"):
+            continue
+        if m := re.match(r"^([A-Za-z0-9][\w-]*):", ln):
+            hooks.append(m[1])
+    if not hooks:
+        return
+    documented: set[str] = set()
+    for ln in _lines(contrib):
+        if m := re.match(r"-\s+\*\*([\w-]+)\*\*", ln):
+            documented.add(m[1])
+    for name in hooks:
+        if name not in documented:
+            g.fail("CONTRIBUTING.md:1",
+                   f"R10 钩子条目缺 {name}（lefthook.yml 顶层 hook 共 {len(hooks)} 段）")
+
+
+def _scope_enum(path: Path) -> tuple[set[str], int] | None:
+    """commitlint 配置 → scope-enum 值集合 + 声明行号；结构异常返回 None。
+
+    先剥 // 注释再找 ']]' 定界（注释含 ']]' 时先定界会截断尾部值——
+    审查 Y1），值数组取声明后最后一个 '[' 之后的单引号字面量
+    （兼容单行 .cjs 与多行带注释 .js）。
+    """
+    text = path.read_text(encoding="utf-8")
+    i = text.find("'scope-enum'")
+    if i < 0:
+        return None
+    line = text.count("\n", 0, i) + 1
+    stripped = "\n".join(re.sub(r"//.*", "", ln) for ln in text[i:].splitlines())
+    end = stripped.find("]]")
+    if end < 0:
+        return None
+    seg = stripped[:end]
+    k = seg.rfind("[")
+    return None if k < 0 else (set(re.findall(r"'([^']+)'", seg[k:])), line)
+
+
+def rule_r9(root: Path, g: Gate) -> None:
+    """R9 commitlint scope 枚举一致性：root .js 权威，三面锚定。
+
+    2026-09-08 狩猎实证三方漂移（root 缺 dependency/code-review/sourcery-
+    autofix/tokensave-mcp、doc 表缺技能行与 arch-hawkeye、分发 .cjs 与 doc
+    声称「保持一致」实为不同集合）。收敛后的不变量（.cjs 为下游通用子集，
+    属有意最小化，不要求全集）：
+      a. root commitlint.config.js scope-enum ⊇ 全部含 SKILL.md 的技能目录名
+      b. git-conventions.md scope 表 ↔ root 枚举双向对齐（技能由指针行覆盖）
+      c. 分发 .cjs 枚举 ⊆ 根枚举 + 声明前注释标注「下游」（防误当权威）
+    """
+    js = root / "commitlint.config.js"
+    doc = root / "steering" / "git-conventions.md"
+    if not js.is_file():
+        return  # 无 commitlint 声明面即无枚举漂移面
+    if not doc.is_file():
+        g.fail("steering/git-conventions.md:1",
+               "R9 scope 表缺失（commitlint.config.js 存在但文档缺失）")
+        return
+    parsed = _scope_enum(js)
+    if parsed is None or not parsed[0]:
+        g.fail("commitlint.config.js:1", "R9 scope-enum 解析失败（数组缺失或结构异常）")
+        return
+    enum, enum_line = parsed
+    where_js = f"commitlint.config.js:{enum_line}"
+
+    # a. 「新增技能时同步追加」机械化：技能目录名 ⊆ 权威枚举
+    skills = {d.name for d in (root / "skills").iterdir()
+              if d.is_dir() and (d / "SKILL.md").is_file()}
+    for name in sorted(skills):
+        if name not in enum:
+            g.fail(where_js, f"R9 scope-enum 缺技能 {name}（skills/ 有 SKILL.md 但未入枚举）")
+
+    # b. 规范表 ↔ 权威枚举双向对齐（技能由指针行覆盖，只比非技能值）
+    #    表内 token 只收 scope 形态（小写字母开头 + 数字/连字符——形态契约：
+    #    现行 scope 全集均为此形态；含 _ 或 . 的 token 不入比对，属声明的
+    #    边界，`skills/` 指针格与 `commitlint.config.js` 等文件名引用不参与）
+    in_scope = False
+    found = False
+    scope_head = 1  # 段首标题行号（证据锚点，防文档重排后漂移——审查 Y2）
+    doc_tokens: dict[str, int] = {}  # token → 首现行号
+    for n, ln in enumerate(_lines(doc), 1):
+        if ln.startswith("### scope"):
+            in_scope, found = True, True
+            scope_head = n
+            continue
+        if in_scope and ln.startswith("#"):
+            break  # 下一标题，scope 段结束
+        if in_scope and ln.startswith("|"):
+            for tok in re.findall(r"`([a-z][a-z0-9-]*)`", ln):
+                doc_tokens.setdefault(tok, n)
+    if not found:
+        g.fail("steering/git-conventions.md:1", "R9 scope 表未找到（无 '### scope' 段）")
+        return
+    where_doc = f"steering/git-conventions.md:{scope_head}"
+    for tok in sorted(enum - set(doc_tokens) - skills):
+        g.fail(where_doc,
+               f"R9 scope 表缺 root commitlint.config.js 中的 {tok}（表须 ⊇ 权威枚举全集；技能由指针行覆盖）")
+    for tok in sorted(set(doc_tokens) - enum):
+        g.fail(f"steering/git-conventions.md:{doc_tokens[tok]}",
+               f"R9 scope 表声明了 root commitlint.config.js 枚举外的 {tok}（表须与权威枚举一致，多余即漂移）")
+
+    # c. 分发件双向守护：子集性 + 定位声明锚定 scope-enum 声明前注释
+    #    （审查 Y4：全文任意角落出现「下游」即过的子串检查不构成约束）
+    cjs = root / "tools" / "git" / "commitlint.config.cjs"
+    if cjs.is_file():
+        cjs_text = cjs.read_text(encoding="utf-8")
+        cjs_parsed = _scope_enum(cjs)
+        if cjs_parsed is None or not cjs_parsed[0]:
+            # 解析失败/空枚举 fail-closed（复审 🟠-1：双引号重排等结构漂移
+            # 不得静默跳过子集与「下游」校验——与根 .js 同形态即报错对齐；
+            # 仅文件缺失仍跳过，兼容无分发件的净夹具，同 R8 缺失跳过惯例）
+            g.fail("tools/git/commitlint.config.cjs:1",
+                   "R9 分发件 scope-enum 解析失败或缺失（fail-closed，不得静默跳过子集校验）")
+        else:
+            cjs_vals, cjs_line = cjs_parsed
+            if extra := sorted(cjs_vals - enum):
+                g.fail(f"tools/git/commitlint.config.cjs:{cjs_line}",
+                       f"R9 分发件 scope-enum 含根枚举外值 {'、'.join(extra)}（.cjs 须为子集）")
+            ci = cjs_text.find("'scope-enum'")
+            ci = max(ci, 0)
+            head_lines = cjs_text[:ci].splitlines()[-6:]
+            if "下游" not in "\n".join(head_lines):
+                g.fail(f"tools/git/commitlint.config.cjs:{cjs_line}",
+                       "R9 分发件 scope-enum 声明前注释未标注「下游」定位（须在枚举注释块注明防误判漂移）")
+
+
+def _source_line(root: Path, where: str) -> str | None:
+    """证据行 'path:line' → 源行文本（行级豁免标记判断用）。"""
+    path_part, _, line_part = where.rpartition(":")
+    if not path_part or not line_part.isdigit():
+        return None
+    p = root / path_part
+    if not p.is_file():
+        return None
+    ln = _lines(p)
+    idx = int(line_part) - 1
+    return ln[idx] if 0 <= idx < len(ln) else None
+
+
+def rule_r11(root: Path, g: Gate) -> None:
+    """R11 总则句双源一致：AGENTS.md 总则句须原样出现在 hooks/load-steering.sh。
+
+    hooks/load-steering.sh 在生成上下文的 Python 字符串里硬编码了
+    AGENTS.md 总则句的第二份副本（2026-09-20 审计 D-09），改动任一侧
+    未同步即漂移。比较做转义形态规范化：AGENTS.md 侧剥行首列表符取
+    整句；shell 侧提取全部 Python 字符串字面量、ast.literal_eval 还原
+    转义后做子串匹配（字面量解码失败的兜底退回原文子串），均不中才 FAIL。
+    """
+    a_path = root / "AGENTS.md"
+    h_path = root / "hooks" / "load-steering.sh"
+    # 缺面/缺锚点一律跳过（对齐 R1-R10 fail-open 惯例——自测夹具与下游
+    # 子集仓均无此双源面；锚点行整体删除属显式重构，漂移信号只取
+    # 「双源在位且锚点命中但 shell 侧无同步副本」这一形态）
+    if not a_path.is_file() or not h_path.is_file():
+        return
+    a_lines = _lines(a_path)
+    idx = next((i for i, ln in enumerate(a_lines, 1) if R11_SENTINEL in ln), None)
+    if idx is None:
+        return
+    sentence = a_lines[idx - 1].lstrip().lstrip("-* ").strip()
+    h_text = h_path.read_text(encoding="utf-8")
+    decoded = []
+    for m in re.finditer(r'"(?:[^"\\\n]|\\.)*"', h_text):
+        try:
+            v = ast.literal_eval(m.group(0))
+        except (ValueError, SyntaxError):
+            continue
+        if isinstance(v, str):
+            decoded.append(v)
+    for m in re.finditer(r"'(?:[^'\\\n]|\\.)*'", h_text):
+        try:
+            v = ast.literal_eval(m.group(0))
+        except (ValueError, SyntaxError):
+            continue
+        if isinstance(v, str):
+            decoded.append(v)
+    if sentence in h_text or any(sentence in s for s in decoded):
+        return
+    h_lines = h_text.splitlines()
+    h_idx = next((i for i, ln in enumerate(h_lines, 1) if R11_SENTINEL in ln), None)
+    where = f"hooks/load-steering.sh:{h_idx}" if h_idx else "hooks/load-steering.sh"
+    g.fail(where, f"R11 总则句与 AGENTS.md:{idx} 不一致（双源硬编码，修订须两侧同步）")
+
+
+def rule_r12(root: Path, g: Gate) -> None:
+    """R12 技能工具计数禁令：skills/*/{SKILL,README}.md 禁止「N+ 工具/N 个工具」。
+
+    外部 MCP server / CLI 的工具数随上游版本漂移，静态计数即易腐陈述
+    （CLAUDE.md「文档不写易腐数字」）。fail-open：无 skills 目录跳过。
+    """
+    skills = root / "skills"
+    if not skills.is_dir():
+        return
+    mds = sorted(skills.glob("*/SKILL.md")) + sorted(skills.glob("*/README.md"))
+    for md in mds:
+        for i, ln in enumerate(_lines(md), 1):
+            if m := R12_TOOL_COUNT_RE.search(ln):
+                g.fail(f"skills/{md.parent.name}/{md.name}:{i}",
+                       f"R12 工具计数「{m.group(0)}」属易腐数字（上游版本漂移）："
+                       f"改写为「数量以实时查询为准」")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="实现↔文档一致性门禁（R3-R12）")
+    ap.add_argument("root", nargs="?", default=".",
+                    help="仓库根（默认当前目录）")
+    ap.add_argument("--allow", action="append", default=[], metavar="REGEX",
+                    help="豁免：正则命中证据行即跳过（可重复）")
+    args = ap.parse_args()
+    if not args.root.strip():
+        # 显式空 root 会 resolve 成 cwd、静默扫错仓（夹具事故形态）——拒判
+        print("doc-freshness: 结构性错误 root 为空串", file=sys.stderr)
+        return 2
+    root = Path(args.root).resolve()
+
+    if missing := [
+        s
+        for s in ("README.md", "skills")
+        if not (root / s).exists()
+    ]:
+        print(f"doc-freshness: 结构性错误 {root} 缺 {'、'.join(missing)}", file=sys.stderr)
+        return 2
+    try:
+        allows = [re.compile(a) for a in args.allow]
+    except re.error as e:
+        print(f"doc-freshness: --allow 正则非法: {e}", file=sys.stderr)
+        return 2
+
+    g = Gate()
+    rule_r3(root, g)
+    rule_r4(root, g)
+    rule_r5(root, g)
+    rule_r6(root, g)
+    rule_r7(root, g)
+    rule_r8(root, g)
+    rule_r9(root, g)
+    rule_r10(root, g)
+    rule_r11(root, g)
+    rule_r12(root, g)
+
+    fails: list[str] = []
+    infos: list[str] = []
+    waived = 0
+    for level, where, msg in g.findings:
+        src = _source_line(root, where)
+        if src is not None and ALLOW_MARK in src:
+            waived += 1
+            continue
+        rendered = f"[{level}] {where} → {msg}"
+        if any(r.search(rendered) for r in allows):
+            waived += 1
+            continue
+        (fails if level == "FAIL" else infos).append(rendered)
+
+    for ln in fails + infos:
+        print(ln)
+    print(f"doc-freshness: {len(fails)} 项漂移 / {len(infos)} 项 INFO / {waived} 项豁免")
+    return 1 if fails else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

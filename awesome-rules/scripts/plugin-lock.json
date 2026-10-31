@@ -1,0 +1,28 @@
+{
+  "description": "安装入口清单 blob 锁定（zero-regression 模式）；有意变更后运行 scripts/plugin_lock.py --update 刷新",
+  "files": {
+    ".agents/plugins/marketplace.json": "a8c9d4ddf59735675a3aa3066ea57c115628d9bf",
+    ".claude-plugin/marketplace.json": "feaf1660fec29031a75cea314e9ed34e410fccb7",
+    ".claude-plugin/plugin.json": "e004ff30c23c41e0cb1d5875ba6816ade0b12f85",
+    ".codex-plugin/plugin.json": "c0da11a9f107c2c0c13f010b21f1c320c7040b2b",
+    ".cursor-plugin/marketplace.json": "a2e4bed6279130502051a13e37c3b9d1ad410a42",
+    ".cursor-plugin/plugin.json": "7ab18ad8e8fcb253cd2d834f561d4503d74d10f2",
+    ".grok-plugin/marketplace.json": "6d5ef7b967582f307b1ce5371b1ca0cd76f9c123",
+    ".grok-plugin/plugin.json": "7ab18ad8e8fcb253cd2d834f561d4503d74d10f2",
+    ".kimi-plugin/marketplace.json": "449147eff3a8cc87b35973612660435dc9b2258d",
+    ".kimi-plugin/plugin.json": "15f9f5068231661a557d3a65e3a8227abce1e8ee",
+    ".opencode/opencode.json": "f5f68509e566233a3edc66227960b6b7e364c97d",
+    ".pi/extensions/awesome-rules.ts": "910037bcb4ad57f0b53eb0dd45104c5dee768cc5",
+    "hooks/hooks.json": "5d2b3580caff3286ee3a7464f1be70daa6ca5de0"
+  },
+  "evidence": {
+    "api-guard": "sha256:d9b2b3db1fce8928f96b8f709eafc0cb39b6d464838870fb8a5ef0a52e6e62dc",
+    "arch-guard": "sha256:6f137baf06b7e63171416b2566e7eea62a58ddeeeb65597e274a45d28403e77d",
+    "contract-guard": "sha256:cac0f758c37b75d8c507a394ff34735dcb0d410e00e1ec5b033e48f6c76a8749",
+    "ddl-guard": "sha256:b75ba79a407d81f015dfe1f20c27953beb3918bde17d11130161edb859d562d8",
+    "impact-guard": "sha256:d1e8485cff3454badf3cdbbe2292eec54ecb5a035c93dd9689d31356f7923017",
+    "skill-evo": "sha256:6e605107b6e63e2c891305c4a97f06f5c4b1883c69d1c3ed38de2b0bd539a4bc",
+    "task-flow": "sha256:9ecdca4ec05040d04fbe0414bb8248d17371425b5dafa130f4571ab8d72bdf11",
+    "work-report": "sha256:f0207bf9db034e059e83bbd57c78ded688ed63c05e82164bf8e81c43be08e9cb"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "awesome-rules",
+  "version": "0.8.0",
+  "private": true,
+  "scripts": {
+    "test": "bash scripts/run_tests.sh",
+    "setup:hooks": "lefthook install",
+    "release": "python3 scripts/release_guard.py --release",
+    "release:raw": "npx --no-install commit-and-tag-version",
+    "release:dry": "npx --no-install commit-and-tag-version --dry-run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "commit-and-tag-version": "13.1.2"
+  }
+}

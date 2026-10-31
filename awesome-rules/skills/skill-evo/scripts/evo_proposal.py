@@ -1,0 +1,991 @@
+#!/usr/bin/env python3
+"""evo_proposal — 进化提案的读写与应用
+
+提案 = markdown（frontmatter 元信息 + 人类可读正文 + 机读 JSON 块）。
+round-trip 只依赖 JSON 块，正文渲染仅供人工审核阅读。
+应用为「只追加」语义：append_under（插入到既有 ## 标题下）/ append_end，
+不做改写删除 —— 天然不会削弱 steering 的【强制】条款。
+"""
+from __future__ import annotations
+import sys
+
+import difflib
+import hashlib
+import json
+import re
+import shutil
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import List, Optional, Tuple
+
+_JSON_BLOCK_RE = re.compile(r"```json\n(.*?)\n```", re.S)
+_MANDATORY_MARK = "【强制】"
+
+
+@dataclass
+class Change:
+    action: str                    # append_under | append_end
+    heading: str = ""
+    new_text: str = ""
+
+
+@dataclass
+class Lesson:
+    type: str                      # correction | failure | success
+    evidence: str
+    target_file: str
+    confidence: str                # High | Medium | Low
+    reason: str = ""
+    change: Optional[Change] = None
+    knowledge_type: str = "pattern"   # pattern=稳定方法论 | instance=随环境实例变化
+    lesson_id: str = ""            # L-XXXXXXXX，write/load 时自动派生
+    supersedes: str = ""           # 被修正的旧 lesson_id（人工审核时填写）
+    # evidence_edited: 与 .orig 快照对比推导的运行态标记（快照缺失=未改，保持旧行为）。
+    # 与下方归档态 verdict="edited"（锚点/落点级人工编辑）同名不同义，互不相干。
+    evidence_edited: bool = False
+    # 以下仅在归档态存在（review 产物，借鉴 harness-anything verdict 语义）
+    verdict: str = ""              # applied | trimmed | edited | rejected
+    verdict_codes: List[str] = field(default_factory=list)
+
+
+def derive_lesson_id(ls: Lesson) -> str:
+    """确定性 lesson ID：L- + sha256(target|type|new_text)[:8]。
+
+    内容相同 → ID 相同（幂等，供重复沉淀检测）；内容变化 → ID 变化
+    （自然演化为新 lesson，修正走 supersedes 链而非改写）。
+    """
+    new_text = ls.change.new_text if ls.change else ""
+    digest = hashlib.sha256(f"{ls.target_file}|{ls.type}|{new_text}".encode("utf-8"))
+    return f"L-{digest.hexdigest()[:8].upper()}"
+
+
+@dataclass
+class Proposal:
+    id: str
+    source_agent: str
+    source_session: str
+    source_path: str
+    created: str
+    status: str = "pending"
+    lessons: List[Lesson] = field(default_factory=list)
+    parse_errors: List[str] = field(default_factory=list)   # 坏机读块诊断（issue #81）
+    # 跨会话来源全集（含 source_path 首源）：复盘型提案的 evidence 常分布于
+    # 多个会话段（发现/误处置/纠正/修复各在一处），单源核验会误报"可疑编造"。
+    # source_path 保留为首源（向后兼容），source_paths 为核验用的全量列表。
+    source_paths: List[str] = field(default_factory=list)
+
+    def all_source_paths(self) -> List[str]:
+        """核验语料路径全集：source_path 在前 + source_paths 去重追加。"""
+        out = [self.source_path] if self.source_path else []
+        for s in self.source_paths:
+            if s and s not in out:
+                out.append(s)
+        return out
+
+    def warnings(self) -> List[str]:
+        """应用前的护栏检查（不阻断，apply 时要求确认/--force）。"""
+        out = []
+        for i, ls in enumerate(self.lessons, 1):
+            nt = ls.change.new_text if ls.change else ""
+            if _MANDATORY_MARK in nt:
+                out.append(f"lesson {i}: new_text 含 {_MANDATORY_MARK}，"
+                           "强制级别应由人工评审设定（apply 需 --force）")
+            if ls.confidence == "Low":
+                out.append(f"lesson {i}: 置信度 Low，建议人工核实后再应用")
+            out.extend(f"lesson {i}: {w}" for w in attribution_warnings(ls))
+            if ls.knowledge_type == "instance":
+                out.append(f"lesson {i}: instance 类知识（随环境实例变化，ID/路径/字段名/"
+                           "账号/时间戳/版本号）不入技能文档，正确位置是代码（运行时发现）"
+                           "或 ADR（决策记录）；技能只沉淀稳定方法论（pattern），--force 可越过")
+        return out
+
+
+# ── 序列化 ──────────────────────────────────────────────────────────────────
+
+def _render_lesson(i: int, ls: Lesson) -> str:
+    ch = ls.change
+    where = (f"追加至 `{ls.target_file}` 的 `{ch.heading}` 下" if ch and ch.action == "append_under"
+             else f"追加至 `{ls.target_file}` 末尾" if ch else "（无变更描述）")
+    body = ""
+    if ch and ch.new_text:
+        body = "\n\n   ```markdown\n   " + ch.new_text.replace("\n", "\n   ") + "\n   ```"
+    sup = f"\n- **修正（supersedes）**：{ls.supersedes}" if ls.supersedes else ""
+    return (f"### {i}. `{ls.lesson_id}` [{ls.confidence}] {ls.type} → {ls.target_file}\n"
+            f"- **证据**：{ls.evidence}\n"
+            f"- **理由**：{ls.reason}{sup}\n"
+            f"- **变更**：{where}{body}")
+
+
+_CTRL_CHARS_RE = re.compile(r"[\x00-\x09\x0b\x0c\x0e-\x1f]")
+
+
+def _machine_block(payload: dict) -> str:
+    """机读 JSON 块：strict 可解析是生成器不变量（issue #81 净化层）。
+
+    CPython json.dumps 对字符串内全部 <0x20 控制字符转义（\\n→字面序列、
+    \\x08→\\b），正常产物必然合法；但 LLM 输出可夹带裸控制字符，若序列化
+    路径改动或环境差异导致未转义，此处防御性转义并用 strict loads 自检——
+    写盘前 fail-fast，坏件永不静默产出。
+
+    正则覆盖除 LF(\\x0a)/CR(\\x0d) 外的全部 <0x20：二者是 JSON 合法结构空白
+    （indent 产物含真实换行），与"字符串内被破坏的裸 CR/LF"不可区分，统一
+    交由 strict loads 自检兜底（合法空白通过，字符串内破坏则 fail-fast）。
+    """
+    raw = json.dumps(payload, ensure_ascii=False, indent=1)
+    safe = _CTRL_CHARS_RE.sub(lambda m: f"\\u{ord(m.group()):04x}", raw)
+    try:
+        json.loads(safe)
+    except json.JSONDecodeError as e:
+        raise ApplyError(f"机读块序列化自检失败（line {e.lineno} col {e.colno}）："
+                         f"payload 含 {e.msg}——请修正生成数据") from e
+    return "```json\n" + safe + "\n```"
+
+
+def _verify_machine_block(path: Path) -> None:
+    """生成器落盘自检：机读块必须 strict 可解析（净化层闸门）。"""
+    m = _JSON_BLOCK_RE.search(path.read_text(encoding="utf-8"))
+    if not m:
+        raise ApplyError(f"{path.name}: 机读 JSON 块缺失（生成器自检失败）")
+    try:
+        json.loads(m.group(1))
+    except json.JSONDecodeError as e:
+        raise ApplyError(f"{path.name}: 机读块非严格可解析（line {e.lineno} "
+                         f"col {e.colno}）；生成器自检拦截，请连同 .orig 上报") from e
+
+
+_PROPOSAL_NAME_RE = re.compile(r"^\d{8}-\d{6}-.*\.(md|orig)$")
+
+
+def _repair_machine_block(content: str) -> str:
+    """机读块内裸控制字符转义修复（与生成侧 _machine_block 同一正则/规则）。
+
+    仅替换 ```json 块内文本；正文 markdown（裸 tab 合法）不动。
+    """
+    def _fix(m: "re.Match") -> str:
+        return "```json\n" + _CTRL_CHARS_RE.sub(
+            lambda c: f"\\u{ord(c.group()):04x}", m.group(1)) + "\n```"
+    return _JSON_BLOCK_RE.sub(_fix, content)
+
+
+def migrate_proposals(root: Path, *, fix: bool = False) -> dict:
+    """净化层存量迁移：扫描归档下提案 .md/.orig，机读块无法 strict 解析
+    （裸控制字符等外部破坏）的 → 转义修复（仅原不可解析且修复后可解析
+    才写回，当前可解析文件零改动；无法修复的仅报告）。
+
+    fix=False 仅报告（repaired 为可修复候选）；fix=True 写回并复检。
+    返回 {ok, repaired, unrecoverable, unchanged}（Path 列表）。
+    """
+    report = {"ok": [], "repaired": [], "unrecoverable": [], "unchanged": []}
+    for f in sorted(list(root.rglob("*.md")) + list(root.rglob("*.orig"))):
+        if not _PROPOSAL_NAME_RE.match(f.name):
+            report["unchanged"].append(str(f))   # 非提案文件（README 等），跳过
+            continue
+        try:
+            content = f.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            report["unrecoverable"].append(str(f))
+            continue
+        m = _JSON_BLOCK_RE.search(content)
+        if not m:
+            report["unrecoverable"].append(str(f))   # 提案文件块缺失（被完全破坏）
+            continue
+        try:
+            json.loads(m.group(1))
+            report["ok"].append(str(f))
+            continue
+        except json.JSONDecodeError:
+            pass
+        repaired = _repair_machine_block(content)
+        try:
+            json.loads(_JSON_BLOCK_RE.search(repaired).group(1))
+        except (json.JSONDecodeError, AttributeError):
+            report["unrecoverable"].append(str(f))   # 结构损坏，无法自动修复
+            continue
+        if fix:
+            f.write_text(repaired, encoding="utf-8")
+        report["repaired"].append(str(f))
+    return report
+
+
+def _fm_source_paths(p: Proposal) -> str:
+    """frontmatter 多源块：首源之外的附加源（YAML 列表）；空则空串。"""
+    if extra := [s for s in p.source_paths if s and s != p.source_path]:
+        return "source_paths:\n" + "".join(f"  - {s}\n" for s in extra)
+    return ""
+
+
+def write_proposal(p: Proposal, pending_dir: Path) -> Path:
+
+    pending_dir.mkdir(parents=True, exist_ok=True)
+    path = pending_dir / f"{p.id}.md"
+    fm = (f"---\nid: {p.id}\nstatus: {p.status}\nsource_agent: {p.source_agent}\n"
+          f"source_session: {p.source_session}\nsource_path: {p.source_path}\n"
+          + _fm_source_paths(p)
+          + f"created: {p.created}\nlessons: {len(p.lessons)}\n---\n")
+    for ls in p.lessons:
+        ls.lesson_id = ls.lesson_id or derive_lesson_id(ls)
+    rendered = "\n".join(_render_lesson(i, ls) for i, ls in enumerate(p.lessons, 1))
+    payload = {"source_paths": p.all_source_paths()} if p.source_paths else {}
+    payload["lessons"] = [{
+        "type": ls.type, "evidence": ls.evidence, "target_file": ls.target_file,
+        "confidence": ls.confidence, "reason": ls.reason,
+        "knowledge_type": ls.knowledge_type,
+        "lesson_id": ls.lesson_id, "supersedes": ls.supersedes,
+        "evidence_edited": ls.evidence_edited,
+        "change": {"action": ls.change.action, "heading": ls.change.heading,
+                   "new_text": ls.change.new_text} if ls.change else None,
+    } for ls in p.lessons]
+    machine = _machine_block(payload)
+    src_note = (f"（{p.source_path}）" if len(p.all_source_paths()) <= 1
+                else f"（跨 {len(p.all_source_paths())} 会话源："
+                     + "、".join(Path(s).name for s in p.all_source_paths()) + "）")
+    body = (f"{fm}\n# 进化提案 {p.id}\n\n> 来源：{p.source_agent} 会话 `{p.source_session}`"
+            f"{src_note}\n\n{rendered}\n\n## 机读数据（apply 依据，勿手改）\n\n{machine}\n")
+    path.write_text(body, encoding="utf-8")
+    _verify_machine_block(path)
+    # 原始快照（无 .md 后缀：绕开 list/守卫/md_link_check 的 *.md glob）——
+    # review 编辑只改正式文件，apply/reject 时 diff 快照推导结构化 verdict
+    orig = pending_dir / f"{p.id}.orig"
+    orig.write_text(body, encoding="utf-8")
+    _verify_machine_block(orig)
+    return path
+
+
+def _parse_fm_source_paths(fm_lines: List[str]) -> List[str]:
+    """frontmatter 多源列表解析：`source_paths:` 后的缩进 `- path` 行序列。"""
+    out: List[str] = []
+    in_block = False
+    for line in fm_lines:
+        if line.startswith("source_paths:"):
+            in_block = True
+            continue
+        if in_block:
+            stripped = line.strip()
+            if stripped.startswith("- "):
+                out.append(stripped[2:].strip())
+            elif stripped == "":
+                continue
+            else:
+                in_block = False   # 列表结束，回到键值区
+    return out
+
+
+def load_proposal(path: Path) -> Proposal:
+    content = path.read_text(encoding="utf-8")
+    fm = {}
+    fm_lines: List[str] = []
+    if content.startswith("---"):
+        end = content.find("\n---", 3)
+        if end != -1:
+            fm_lines = content[3:end].strip().splitlines()
+            for line in fm_lines:
+                key, _, val = line.partition(":")
+                if key.strip() == "source_paths" or (line.startswith("  ") and val == ""):
+                    continue   # 多源列表行：由 _parse_fm_source_paths 专门解析
+                fm[key.strip()] = val.strip()
+    source_paths = _parse_fm_source_paths(fm_lines)
+    lessons: List[Lesson] = []
+    errors: List[str] = []
+    payload = None
+    for m in _JSON_BLOCK_RE.finditer(content):
+        try:
+            candidate_payload = json.loads(m.group(1))
+        except json.JSONDecodeError as e:   # 坏块不静默跳过：诊断上浮（Tripwire）
+            errors.append(f"{path.name}: 机读 JSON 块解析失败: {e.msg}（line {e.lineno} col {e.colno}）")
+            continue
+        if isinstance(candidate_payload, dict):   # 跳过非 lessons 载荷（如迭代日志 list）
+            payload = candidate_payload
+            break
+    if payload is not None and "lessons" not in payload:
+        errors.append(f"{path.name}: 机读块缺 lessons 字段")
+    if payload:
+        try:
+            for ls in payload.get("lessons", []):
+                ch_raw = ls.get("change") or {}
+                ch = Change(action=str(ch_raw.get("action", "append_end")),
+                            heading=str(ch_raw.get("heading", "")),
+                            new_text=str(ch_raw.get("new_text", ""))) if ch_raw else None
+                lessons.append(Lesson(
+                    type=str(ls.get("type", "")), evidence=str(ls.get("evidence", "")),
+                    target_file=str(ls.get("target_file", "")),
+                    confidence=str(ls.get("confidence", "")),
+                    reason=str(ls.get("reason", "")), change=ch,
+                    knowledge_type=str(ls.get("knowledge_type", "pattern")),  # 旧提案兼容默认
+                    lesson_id=str(ls.get("lesson_id", "")),
+                    supersedes=str(ls.get("supersedes", "")),
+                    evidence_edited=bool(ls.get("evidence_edited", False)),
+                    verdict=str(ls.get("verdict", "")),
+                    verdict_codes=[str(c) for c in ls.get("verdict_codes") or []]))
+        except json.JSONDecodeError:
+            pass
+        # fm 列表丢失时以机读块 source_paths 兜底（fm 被外设工具剥离的场景）
+        if not source_paths and isinstance(payload.get("source_paths"), list):
+            source_paths = [str(s) for s in payload["source_paths"]]
+    for ls in lessons:
+        ls.lesson_id = ls.lesson_id or derive_lesson_id(ls)   # 旧提案兼容：按内容补派生
+    # 守卫：_orig_path 对 .orig 自身求值=自身，无此守卫 load(.md)→load(.orig)→
+    # load(.orig)… 无限自递归。.orig 可解析→派生值覆盖一切存储值（防篡改基准，
+    # 先清后置：回退改写不残留历史 true，issue #113 review F-R1）；缺失→不派生
+    # （快照缺失视为未改，保持旧行为）；坏快照→保守保留存储值并上浮诊断。
+    if path.suffix == ".md":
+        orig_file = _orig_path(path)
+        if orig_file.is_file():
+            try:
+                orig_p = load_proposal(orig_file)
+            except OSError as e:
+                errors.append(f"{orig_file.name}: .orig 快照读取失败: {e}")
+            else:
+                # 坏快照诊断上浮、不静默（Tripwire，与主件坏块同构，issue #81）
+                errors.extend(orig_p.parse_errors)
+                if lessons and not orig_p.lessons:
+                    errors.append(f"{orig_file.name}: 快照无可解析 lessons，"
+                                  "evidence 改写检测失效（请连同 .orig 上报）")
+                elif orig_p.parse_errors:
+                    # 部分损坏（坏块+可解析块并存）：快照 lessons 不完整，派生会把
+                    # 快照缺失条目误判为未改写——保留存储值，仅上浮诊断（PR #114）
+                    errors.append(f"{orig_file.name}: 快照部分损坏"
+                                  f"（{len(orig_p.parse_errors)} 处解析错误），"
+                                  "evidence 改写检测保留存储值（请连同 .orig 上报）")
+                else:
+                    for ls in lessons:    # 快照完好→派生权威：先清残留存储值再置位
+                        ls.evidence_edited = False
+                    _derive_evidence_edited(lessons, orig_p.lessons)
+    return Proposal(
+        id=fm.get("id", path.stem), source_agent=fm.get("source_agent", "?"),
+        source_session=fm.get("source_session", "?"), source_path=fm.get("source_path", "?"),
+        created=fm.get("created", "?"), status=fm.get("status", "pending"), lessons=lessons,
+        parse_errors=errors, source_paths=source_paths)
+
+
+def list_proposals(status_dir: Path) -> List[Proposal]:
+    if not status_dir.is_dir():
+        return []
+    return [load_proposal(p) for p in sorted(status_dir.glob("*.md"))]
+
+
+def _read_fm(path: Path) -> dict:
+    """轻量 frontmatter 读取（只扫文件头，不解析正文）。"""
+    fm: dict = {}
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            if f.readline().startswith("---"):
+                for line in f:
+                    if line.startswith("---"):
+                        break
+                    key, _, val = line.partition(":")
+                    fm[key.strip()] = val.strip()
+    except OSError:
+        pass
+    return fm
+
+
+def session_proposal_exists(paths: dict, source_agent: str, source_session: str) -> bool:
+    """单会话单提案守卫：该会话在 pending/applied/rejected 任一状态已有提案。
+
+    防两类重复：a) 内容哈希竞态之外的兜底（如手动跑两次）；
+    b) 会话尾部增长触发重总结导致整包重复提案。代价是丢失尾部新增经验，
+    与「处理过即不再重提」的既定取舍一致。
+    """
+    for key in ("pending", "applied", "rejected"):
+        d: Path = paths[key]
+        if not d.is_dir():
+            continue
+        for f in d.glob("*.md"):
+            fm = _read_fm(f)
+            if (fm.get("source_agent") == source_agent
+                    and fm.get("source_session") == source_session
+                    and fm.get("type") != "prompt_evolution"):
+                return True
+    return False
+
+
+def applied_lesson_ids(applied_dir: Path) -> dict:
+    """已应用归档索引：lesson_id → 来源提案 stem。
+
+    供两类检查：重复沉淀检测（同 ID 再次出现）与 supersedes 引用校验。
+    """
+    out: dict = {}
+    if not applied_dir.is_dir():
+        return out
+    for f in sorted(applied_dir.glob("*.md")):
+        for ls in load_proposal(f).lessons:
+            out.setdefault(ls.lesson_id or derive_lesson_id(ls), f.stem)
+    return out
+
+
+_QUOTE_NORM = str.maketrans({"“": '"', "”": '"', "‘": "'",
+                             "’": "'", "「": '"', "」": '"'})
+
+
+def _norm_quote(text: str) -> str:
+    """空白剔除 + 引号字形归一（弯引号/直角引号 → 直引号）。
+
+    总结器会把会话原文的弯引号写成直引号（实测 2026-08-19 提案 lesson 2），
+    字形差异不应导致真实引用被判 miss。
+    """
+    return "".join(text.split()).translate(_QUOTE_NORM)
+
+
+def check_idempotent(new_text: str, content: str, threshold: float) -> Optional[Tuple[int, float]]:
+    """语义幂等检查：new_text 与 content 既有段落（按空行分段）的相似度比对。
+
+    两侧各做 _norm_quote 归一后逐段 difflib.SequenceMatcher(autojunk=False)；
+    返回相似度 >= threshold 的最高比率段 (段序号 1-based, 比率)，无命中返回 None。
+    空白段跳过但占原序号（分段原序保持，消息可指回文件中的段落位置）。
+    """
+    norm_nt = _norm_quote(new_text)
+    if not norm_nt:
+        return None
+    best: Optional[Tuple[int, float]] = None
+    for idx, para in enumerate(re.split(r"\n\s*\n", content), 1):
+        norm_para = _norm_quote(para)
+        if not norm_para:
+            continue
+        ratio = difflib.SequenceMatcher(None, norm_nt, norm_para, autojunk=False).ratio()
+        if ratio >= threshold and (best is None or ratio > best[1]):
+            best = (idx, ratio)
+    return best
+
+
+PARAPHRASE_MIN_CHARS = 16
+"""miss 降级阈值：最长连续命中 ≥ 该字数判 paraphrase（转述），不再拦 apply。
+
+实测（2026-08-24 预审 59 条 miss 全量核验）：总结器常把会话真实原文片段用
+连接词缝合成整段 evidence，整段逐字核验必 miss，但最长连续命中普遍 ≥16 字
+（编造型通常只有 <8 字的公共短语命中）。转述降级为 ⚠ 由人复核，不阻断应用。
+"""
+
+
+# ── 归因断言核验（2026-08-28 实证：引文真实 ≠ 判断正确）────────────────────
+# 事故：会话推测「.factory 流水线把主仓置 bare」被逐字引文核验放行（evidence
+# 确实出自会话原文），但 dispatch 日志后证主链清白（作案在两轮空档 13:13–13:23，
+# 系流水线调度的 agent 会话误操作）。错误归因随 CLAUDE.md 条款扩散。故归因类
+# 断言升级证据等级：推断语气不得沉淀为断言，且必须带可核对锚。
+
+_ATTRIBUTION_RE = re.compile(
+    r"把.{1,24}?(置为|篡改|改成|删除|清掉|搞坏|写坏)|"
+    r"(造成|导致|所致|所为)|"
+    r"归因于"
+)
+_SPECULATION_RE = re.compile(r"可能|推测|疑似|大概|似乎|估计|猜测|应该|仿佛")
+_ANCHOR_RE = re.compile(
+    r"\d{2}:\d{2}|\d{4}-\d{2}-\d{2}|"                       # 时刻 / 日期
+    r"[A-Za-z_][\w./-]*\.(?:py|sh|md|json|log|ts|sql):\d+|"  # file:line
+    r"exit[= ]\d+|grep -n|sed -n"                            # 命令/日志形态
+)
+
+
+def attribution_warnings(ls: Lesson) -> List[str]:
+    """归因断言的证据等级核验：比引文核验高一档。
+
+    verify_evidence 只证明「evidence 出自会话原文」（引文真实），不证明
+    「evidence 的判断正确」——会话原文本身可以是错的（推测被当成结论）。
+    归因句式（X 把 Y 置为/造成/所为）一旦落库会被后续会话当事实引用，
+    故要求：① evidence 无推断语气；② evidence 带可核对锚（时间窗/file:line/
+    命令输出）。命中警告 → apply 阻断，人工核实后 --force。
+    """
+    nt = ls.change.new_text if ls.change else ""
+    if not _ATTRIBUTION_RE.search(nt):
+        return []
+    out = []
+    if _SPECULATION_RE.search(ls.evidence or ""):
+        out.append("归因断言的 evidence 含推断语气（可能/疑似/推测…）——"
+                   "推测不得沉淀为断言式条款，须先以时间窗/日志证据定案")
+    if not _ANCHOR_RE.search(ls.evidence or ""):
+        out.append("归因断言的 evidence 缺可核对锚（时刻/file:line/命令输出）——"
+                   "无法复核归因主体，2026-08-27 实证：在场≠所为，dispatch 日志"
+                   "曾排除主链而条款误记流水线所为")
+    return out
+
+
+def _longest_match_len(quote: str, corpus: str, floor: int = 4) -> int:
+    """归一化后 quote 在 corpus 中的最长连续命中长度（二分扩展 + 短窗预筛）。
+
+    只在 miss 分支调用（quote 已确认非子串），evidence 量级 ~百字、语料 ~MB，
+    预筛使无命中起点的位置近乎零成本。
+    """
+    best = 0
+    for start in range(len(quote)):
+        if quote[start:start + floor] not in corpus:
+            continue
+        lo, hi = floor, len(quote) - start
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if quote[start:start + mid] in corpus:
+                lo = mid
+            else:
+                hi = mid - 1
+        best = max(best, lo)
+    return best
+
+
+def verify_evidence(p: Proposal, corpus: str) -> List[Tuple[int, str]]:
+    """逐 lesson 核验 evidence 是否逐字命中来源会话原文（空白不敏感）。
+
+    返回 (lesson 序号, 状态)：hit=命中 / paraphrase=未整段命中但最长连续
+    命中 ≥ PARAPHRASE_MIN_CHARS（LLM 缝合转述，大概率真实，不拦 apply）/
+    miss=未命中（可疑编造，apply 拦截） / edited=作者改写件（与 .orig 快照
+    不一致——内容或真但叙述经作者修饰，机器核验不背书，不进 hit/paraphrase
+    判定；与归档态 verdict 的 edited 同名不同义） / no_corpus=语料缺失无法核验。
+    把人工抽查 evidence 真实性变成脚本核验。
+    """
+    norm_corpus = _norm_quote(corpus)
+    results: List[Tuple[int, str]] = []
+    for i, ls in enumerate(p.lessons, 1):
+        if ls.evidence_edited:   # 改写件独立于语料（源于 .orig 对比），优先于 no_corpus
+            results.append((i, "edited"))
+            continue
+        if not norm_corpus:
+            results.append((i, "no_corpus"))
+            continue
+        quote = _norm_quote(ls.evidence)
+        if quote and quote in norm_corpus:
+            results.append((i, "hit"))
+        elif quote and _longest_match_len(quote, norm_corpus) >= PARAPHRASE_MIN_CHARS:
+            results.append((i, "paraphrase"))
+        else:
+            results.append((i, "miss"))
+    return results
+
+
+# ── 应用 ────────────────────────────────────────────────────────────────────
+
+class ApplyError(Exception):
+    pass
+
+
+def validate_target(target_file: str, repo_root: Path) -> Path:
+    """目标必须解析到仓库内的允许资产（防路径逃逸）。
+
+    允许：skills/**.md、steering/**.md、根 README.md（索引表格）、根 CLAUDE.md（AI 操作指引）。
+    """
+    root = repo_root.resolve()
+    p = (root / target_file).resolve()
+    if root != p and root not in p.parents:
+        raise ApplyError(f"目标越出仓库边界：{target_file}")
+    rel = p.relative_to(root).as_posix()
+    ok = ((rel.startswith("skills/") or rel.startswith("steering/"))
+          and rel.endswith(".md")) or rel in ("README.md", "CLAUDE.md")
+    if not ok:
+        raise ApplyError(f"目标不在允许范围（skills/、steering/ 的 .md 或根 README/CLAUDE.md）：{target_file}")
+    if not p.is_file():
+        raise ApplyError(f"目标文件不存在：{target_file}")
+    return p
+
+
+def _apply_change(content: str, ch: Change, target_file: str) -> str:
+    if ch.action == "append_end":
+        sep = "" if content.endswith("\n") else "\n"
+        return f"{content}{sep}{ch.new_text}\n"
+    if ch.action == "append_under":
+        if not ch.heading:
+            raise ApplyError(f"{target_file}: append_under 缺少 heading")
+        lines = content.splitlines(keepends=True)
+        hits = [i for i, ln in enumerate(lines)
+                if ln.strip() == ch.heading.strip() and ln.lstrip().startswith("#")]
+        if not hits:
+            raise ApplyError(f"{target_file}: 找不到标题锚点 `{ch.heading}`")
+        if len(hits) > 1:
+            raise ApplyError(f"{target_file}: 标题锚点 `{ch.heading}` 出现 {len(hits)} 次，不唯一")
+        i = hits[0]
+        # 表格感知：标题下紧跟表格（| 行）时，插到表格末行之后（插到表头前会破坏表格）
+        j = i + 1
+        while j < len(lines) and not lines[j].strip():
+            j += 1
+        if j < len(lines) and lines[j].lstrip().startswith("|"):
+            while j + 1 < len(lines) and lines[j + 1].lstrip().startswith("|"):
+                j += 1
+            lines.insert(j + 1, ch.new_text.rstrip("\n") + "\n")
+            return "".join(lines)
+        insert = ("\n" if i + 1 < len(lines) and lines[i + 1].strip() else "") + ch.new_text + "\n"
+        lines.insert(i + 1, insert)
+        return "".join(lines)
+    raise ApplyError(f"{target_file}: 未知 action `{ch.action}`")
+
+
+def normalize_headings(p: Proposal, repo_root: Path, md_path: Optional[Path] = None) -> List[str]:
+    """apply 前自动规范化缺 `#` 前缀的 heading（改写 pending .md，非内存幻影）。
+
+    实测坑（2026-08-24 manual 提案 + 批量执行器 3 份提案）：手工/程序构造的
+    heading 常漏 `##` 前缀，apply 匹配契约是 `ln.strip() == heading.strip()`
+    且行首为 #——裸标题名永远失配，报「找不到标题锚点」。本函数把
+    `核心原则` 规范化为 `## 核心原则` 并回写 pending .md；verdict 推导
+    diff .orig 快照时 heading 变化自然落 edited，归档语义不丢。
+
+    fail-closed 保留：规范化后仍 0 命中或多于 1 命中 → 不改写，让
+    apply 的原错误路径报告（锚点真缺陷不该被自动猜测掩盖）。
+    """
+    log: List[str] = []
+    changed = False
+    for i, ls in enumerate(p.lessons, 1):
+        ch = ls.change
+        if not ch or ch.action != "append_under" or not ch.heading:
+            continue
+        if ch.heading.lstrip().startswith("#"):
+            continue
+        try:
+            target = validate_target(ls.target_file, repo_root)
+        except ApplyError:
+            continue  # 目标非法留给 apply 原路径报错
+        lines = target.read_text(encoding="utf-8").splitlines()
+        cand = f"## {ch.heading.strip()}"
+        hits = [ln for ln in lines if ln.strip() == cand and ln.lstrip().startswith("#")]
+        if len(hits) == 1:
+            log.append(f"lesson {i}: heading `{ch.heading}` 无 # 前缀，规范化为 `{cand}`（verdict=edited）")
+            ch.heading = cand
+            changed = True
+        elif len(hits) > 1:
+            log.append(f"lesson {i}: heading `{ch.heading}` 规范化后命中 {len(hits)} 处，不唯一——不自动改写")
+    if changed:
+        _rewrite_pending_md(p, md_path or _default_pending_md(p))
+    return log
+
+
+def _default_pending_md(p: Proposal) -> Path:
+    return Path.home() / ".config/ar/skill-evo/proposals/pending" / f"{p.id}.md"
+
+
+def _render_pending_body(p: Proposal) -> str:
+    fm = (f"---\nid: {p.id}\nstatus: {p.status}\nsource_agent: {p.source_agent}\n"
+          f"source_session: {p.source_session}\nsource_path: {p.source_path}\n"
+          + _fm_source_paths(p)
+          + f"created: {p.created}\nlessons: {len(p.lessons)}\n---\n")
+    rendered = "\n".join(_render_lesson(i, ls) for i, ls in enumerate(p.lessons, 1))
+    payload = {"source_paths": p.all_source_paths()} if p.source_paths else {}
+    payload["lessons"] = [{
+        "type": ls.type, "evidence": ls.evidence, "target_file": ls.target_file,
+        "confidence": ls.confidence, "reason": ls.reason,
+        "knowledge_type": ls.knowledge_type,
+        "lesson_id": ls.lesson_id, "supersedes": ls.supersedes,
+        "evidence_edited": ls.evidence_edited,
+        "change": {"action": ls.change.action, "heading": ls.change.heading,
+                   "new_text": ls.change.new_text} if ls.change else None,
+    } for ls in p.lessons]
+    machine = _machine_block(payload)
+    src_note = (f"（{p.source_path}）" if len(p.all_source_paths()) <= 1
+                else f"（跨 {len(p.all_source_paths())} 会话源）")
+    return (f"{fm}\n# 进化提案 {p.id}\n\n> 来源：{p.source_agent} 会话 `{p.source_session}`"
+            f"{src_note}\n\n{rendered}\n\n## 机读数据（apply 依据，勿手改）\n\n{machine}\n")
+
+def _rewrite_pending_md(p: Proposal, md_path: Path) -> None:
+    """按当前内存态重写 pending .md（.orig 快照不动——verdict 推导依据）。"""
+    md_path.write_text(_render_pending_body(p), encoding="utf-8")
+
+
+def annotate_pending_block(md_path: Path, msg: str) -> None:
+    """apply 拦截原因写入 pending .md frontmatter（audit 痕迹）。
+
+    覆盖式：先删既有 apply_blocked: 行防重跑堆积，再在 fm 收尾 --- 前插入单行
+    （msg 内换行替换为空格，fm 单行值）；无 fm 时文件头补空 fm 再注入。
+    只写 .md，永不动 .orig 快照（verdict 推导依据）。
+    """
+    text = md_path.read_text(encoding="utf-8")
+    lines = [ln for ln in text.splitlines(keepends=True)
+             if not ln.startswith("apply_blocked:")]
+    one_line = "apply_blocked: " + msg.replace("\n", " ") + "\n"
+    if text.startswith("---"):
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                lines.insert(i, one_line)
+                break
+        else:                                    # fm 无收尾 ---（残缺）：头部直插
+            lines.insert(0, one_line)
+    else:
+        lines = ["---\n", "---\n", one_line] + lines
+    md_path.write_text("".join(lines), encoding="utf-8")
+
+
+def set_pending_status(md_path: Path, new_status: str) -> None:
+    """pending .md 的 fm status 原位改写（approve 动作的落盘形式）。
+
+    审批标记必须以 status 值形态存在：_render_pending_body 模板含 status 键，
+    normalize_headings 重渲染不丢；独立 fm 键（approved_by/approved_at）会被
+    模板抹掉，禁用。只写 .md，永不动 .orig 快照（verdict 推导依据）。
+    fail-closed：无 fm 或 fm 无收尾 --- 的结构异常文件拒绝改写，不静默修复。
+    """
+    text = md_path.read_text(encoding="utf-8")
+    end = text.find("\n---", 3)
+    if not text.startswith("---") or end == -1:
+        raise ApplyError(f"{md_path.name}: 缺 frontmatter/无收尾 ---，拒绝改写 status")
+    fm = text[3:end + 1]                       # 只动 fm 区间，防误删正文 status 行
+    kept = "".join(ln + "\n" for ln in fm.splitlines()
+                   if not ln.startswith("status:"))   # 单键纪律：先删全部旧值
+    md_path.write_text(text[:3] + kept + f"status: {new_status}\n" + text[end + 1:],
+                       encoding="utf-8")
+
+
+def apply_proposal(p: Proposal, repo_root: Path, *, dry_run: bool = False,
+                   force: bool = False, applied_dir: Optional[Path] = None,
+                   extra_warnings: Optional[List[str]] = None,
+                   idempotent_threshold: float = 0.8) -> List[str]:
+    """两阶段应用：先在内存中对所有 lesson 校验并计算新内容，全部通过才落盘。
+
+    返回各文件变更说明；dry_run 只输出不写。锚点失配/不唯一即整体失败，不盲写。
+    护栏警告（【强制】标记/Low 置信度/重复沉淀——归档命中/逐字/语义相似/evidence 未核验）
+    需 --force 越过；supersedes 引用无效为硬错（输入非法，force 不可越过）。
+    """
+    if not p.lessons:
+        raise ApplyError("提案无 lesson"
+                         + (f"（{'；'.join(p.parse_errors)}）" if p.parse_errors else ""))
+    # 阶段 1：内存计算（同一文件多个 lesson 顺序叠加）+ 重复沉淀检测
+    new_contents: dict = {}
+    report: List[str] = []
+    guard = list(extra_warnings or [])
+    known = applied_lesson_ids(applied_dir) if applied_dir else {}
+    for i, ls in enumerate(p.lessons, 1):
+        if not ls.change or not ls.change.new_text:
+            raise ApplyError(f"lesson {i}: 无变更内容")
+        lid = ls.lesson_id or derive_lesson_id(ls)
+        if ls.supersedes == lid:
+            raise ApplyError(f"lesson {i}: supersedes 不能指向自身（{lid}）")
+        if ls.supersedes and ls.supersedes not in known:
+            raise ApplyError(f"lesson {i}: supersedes 引用的 {ls.supersedes} "
+                             "不在已应用归档中（请核对 lesson_id）")
+        if lid in known:
+            guard.append(f"lesson {i}: 与已应用提案 {known[lid]} 的 {lid} 内容相同"
+                         "（疑似重复沉淀，--force 可越过）")
+        path = validate_target(ls.target_file, repo_root)
+        content = new_contents.get(path.as_posix()) or path.read_text(encoding="utf-8")
+        if ls.change.new_text.strip() in content:
+            guard.append(f"lesson {i}: new_text 已逐字存在于 {ls.target_file}"
+                         "（疑似重复追加，--force 可越过）")
+        if dup := check_idempotent(
+            ls.change.new_text, content, idempotent_threshold
+        ):
+            seg_no, ratio = dup
+            guard.append(f"lesson {i}: 与 {ls.target_file} 既有段落 {seg_no} 语义重复"
+                         f"（相似度 {ratio:.2f} >= 阈值 {idempotent_threshold}；"
+                         "请人工 diff 后改写合并，--force 可越过）")
+        new_contents[path.as_posix()] = _apply_change(content, ls.change, ls.target_file)
+        where = (f"`{ls.change.heading}` 下" if ls.change.action == "append_under" else "末尾")
+        report.append(f"lesson {i} → {ls.target_file}（{where}）追加 {len(ls.change.new_text)} chars")
+    # 阶段 2：护栏汇总（默认阻断；--force 越过后落盘）
+    guard = p.warnings() + guard
+    if guard and not force:
+        raise ApplyError("存在护栏警告，需人工确认后 --force 应用：\n- " + "\n- ".join(guard))
+    if not dry_run:
+        for posix_path, content in new_contents.items():
+            Path(posix_path).write_text(content, encoding="utf-8")
+    return report
+
+
+def move_proposal(proposal_path: Path, dest_dir: Path, extra_fm: dict) -> Path:
+    """状态流转：pending → applied/rejected（frontmatter 追加记录后移动）。"""
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    content = proposal_path.read_text(encoding="utf-8")
+    stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    extra = "".join(f"{k}: {v}\n" for k, v in extra_fm.items())
+    if content.startswith("---"):
+        end = content.find("\n---", 3)
+        if end != -1:
+            content = content[:end + 1] + extra + content[end + 1:]
+    else:
+        content = f"---\n{extra}---\n{content}"
+    dest = dest_dir / proposal_path.name
+    final = dest.with_name(
+                    f"{dest.stem}-{stamp.replace(':', '').replace('+', '-')}{dest.suffix}") if dest.exists() else dest
+    final.write_text(content, encoding="utf-8")
+    if proposal_path.is_dir():  # 防御：提案应为文件
+        shutil.rmtree(proposal_path, ignore_errors=True)
+    else:
+        proposal_path.unlink(missing_ok=True)
+    return final
+
+
+# ── 结构化审核标注（verdict，借鉴 harness-anything verdict 语义）─────────────
+
+REASON_CODES = ("dup_superset", "content_overlap", "anchor_defect", "low_value",
+                "off_target", "scope_mismatch", "style_mismatch")
+
+
+def validate_codes(codes: List[str]) -> None:
+    """语义原因码校验：封闭枚举 + other:<自由文本> 逃生舱；非法即拒（fail-closed）。"""
+    for c in codes:
+        if c not in REASON_CODES and not c.startswith("other:"):
+            raise ApplyError(f"未知语义码：{c}（合法：{', '.join(REASON_CODES)} 或 other:<文本>）")
+
+
+def _parse_codes(raw: List[str]) -> Tuple[dict, List[str]]:
+    """拆分 'L-XXXX:code'（lesson 级）与裸 'code'（提案级，作用于全部 lessons）。"""
+    per_lesson: dict = {}
+    proposal_level: List[str] = []
+    for item in raw:
+        item = item.strip()
+        if not item:
+            continue
+        lid, sep, code = item.partition(":")
+        if sep and lid.startswith("L-"):
+            per_lesson.setdefault(lid, []).append(code.strip())
+        else:
+            proposal_level.append(item)
+    all_codes = proposal_level + [c for cs in per_lesson.values() for c in cs]
+    validate_codes(all_codes)
+    return per_lesson, proposal_level
+
+
+def _orig_path(path: Path) -> Path:
+    return path.parent / f"{path.stem}.orig"
+
+def _derive_evidence_edited(cur: List[Lesson], orig: List[Lesson]) -> None:
+    """diff .orig 快照推导 evidence 改写标志（就地置位，issue #113 需求 1）。
+
+    两遍配对严格镜像 _derive_verdicts：① 同 lesson_id（derive_lesson_id 哈希
+    不含 evidence，纯 evidence 改写 id 不变必被此遍捕获）；② 残余按
+    (target_file, type) 相等且 new_text 包含关系配对（裁剪 new_text 致 id
+    变化的混合编辑兜底）。仅对比 evidence 字段——new_text/锚点编辑属正常
+    review 流不降级（issue #113 边界条款）。
+    """
+    remaining = set(range(len(cur)))
+    unmatched_orig: List[Lesson] = []
+    for o in orig:
+        hit = next((i for i in sorted(remaining)
+                    if cur[i].lesson_id == o.lesson_id), None)
+        if hit is None:
+            unmatched_orig.append(o)
+            continue
+        if cur[hit].evidence != o.evidence:
+            cur[hit].evidence_edited = True
+        remaining.discard(hit)
+    for o in unmatched_orig:                     # 第二遍：id 随内容变化兜底
+        hit = next((i for i in sorted(remaining)
+                    if cur[i].target_file == o.target_file and cur[i].type == o.type
+                    and _text_related(o, cur[i])), None)
+        if hit is None:
+            continue                             # review 期新增 lesson，无基线
+        if cur[hit].evidence != o.evidence:
+            cur[hit].evidence_edited = True
+        remaining.discard(hit)
+
+
+def _derive_verdicts(cur: List[Lesson], orig: Optional[List[Lesson]]) -> List[str]:
+    """diff 原始 vs 当前 lessons 推导结构 verdict（事实由脚本定，语义码由人补）。
+
+    两遍匹配：① 同 lesson_id（内容未变，含位移）；② 残余按 (target, type) 且
+    new_text 存包含关系配对（裁剪的典型特征：改后文本 ⊂ 原文本）——包含关系
+    排除"剔除后错配到相邻 lesson"。new_text 变化 → trimmed；仅锚点/action
+    变化 → edited；原版存在但无对应 → 被剔除（不占 verdict 位）；
+    无原版快照 → 全部 applied（退化为声明性）。
+    """
+    verdicts = ["applied"] * len(cur)
+    if not orig:
+        return verdicts
+    remaining = set(range(len(cur)))
+    unmatched_orig: List[Lesson] = []
+    for o in orig:
+        hit = next((i for i in sorted(remaining)
+                    if cur[i].lesson_id == o.lesson_id), None)
+        if hit is None:
+            unmatched_orig.append(o)
+            continue
+        _mark_verdict(verdicts, hit, o, cur[hit])
+        remaining.discard(hit)
+    for o in unmatched_orig:                     # 第二遍：裁剪配对（id 随内容变）
+        hit = next((i for i in sorted(remaining)
+                    if cur[i].target_file == o.target_file and cur[i].type == o.type
+                    and _text_related(o, cur[i])), None)
+        if hit is None:
+            continue                             # 真被剔除
+        _mark_verdict(verdicts, hit, o, cur[hit])
+        remaining.discard(hit)
+    return verdicts
+
+
+def _mark_verdict(verdicts: List[str], i: int, o: Lesson, c: Lesson) -> None:
+    ch_o, ch_c = o.change, c.change
+    if ch_o and ch_c:
+        if ch_o.new_text != ch_c.new_text:
+            verdicts[i] = "trimmed"
+        elif (ch_o.heading, ch_o.action) != (ch_c.heading, ch_c.action):
+            verdicts[i] = "edited"
+
+
+def _text_related(a: Lesson, b: Lesson) -> bool:
+    """裁剪判定：两文本存在包含关系（短的是长的子串）。"""
+    ta = (a.change.new_text if a.change else "").strip()
+    tb = (b.change.new_text if b.change else "").strip()
+    return bool(ta) and bool(tb) and (ta in tb or tb in ta)
+
+
+def finalize_review(path: Path, raw_codes: List[str], *, rejected: bool) -> Path:
+    """归档前注入结构化 verdict：diff 推导 + 语义码，写回机读 JSON 与 fm 投影。
+
+    返回处理后的 pending 路径（调用方随后 move_proposal 归档并搬运 .orig）。
+    """
+    p = load_proposal(path)
+    per_lesson, proposal_level = _parse_codes(raw_codes)
+    orig = load_proposal(_orig_path(path)).lessons if _orig_path(path).is_file() else None
+    verdicts = (["rejected"] * len(p.lessons) if rejected
+                else _derive_verdicts(p.lessons, orig))
+    codes = []
+    for i, ls in enumerate(p.lessons):
+        ls.verdict = verdicts[i]
+        merged = list(proposal_level) + list(per_lesson.get(ls.lesson_id, []))
+        ls.verdict_codes = list(dict.fromkeys(merged))          # 合并去重保序
+        codes.extend(ls.verdict_codes)
+    # 注入机读 JSON 块（首个 lessons 载荷）
+    content = path.read_text(encoding="utf-8")
+    m = _JSON_BLOCK_RE.search(content)
+    if not m:
+        raise ApplyError(f"{path.name}: 找不到机读 JSON 块")
+    try:
+        payload = json.loads(m.group(1))
+    except json.JSONDecodeError as e:
+        raise ApplyError(f"{path.name}: 机读 JSON 块解析失败: {e.msg}"
+                         f"（line {e.lineno} col {e.colno}）；机读块勿手改，"
+                         "如需回退请用同名 .orig 覆盖后重试") from e
+    for ls_json, ls in zip(payload.get("lessons", []), p.lessons):
+        ls_json["verdict"] = ls.verdict
+        ls_json["verdict_codes"] = ls.verdict_codes
+        ls_json["evidence_edited"] = ls.evidence_edited
+    content = content[:m.start()] + "```json\n" + json.dumps(
+        payload, ensure_ascii=False, indent=1) + "\n```" + content[m.end():]
+    # frontmatter 单行投影（人扫读）
+    counts = {v: verdicts.count(v) for v in ("applied", "trimmed", "edited", "rejected") if v in verdicts}
+    summary = ", ".join(f"{k}={n}" for k, n in counts.items())
+    if codes:
+        summary += f"；codes={','.join(sorted(set(codes)))}"
+    n_edited = sum(ls.evidence_edited for ls in p.lessons)
+    edited_line = f"evidence_edited: {n_edited}\n" if n_edited else ""
+    content = content.replace(
+        f"lessons: {len(p.lessons)}\n",
+        f"lessons: {len(p.lessons)}\n{edited_line}review: {summary}\n", 1)
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def archive_orig(path: Path, dest_dir: Path) -> Optional[Path]:
+    """原始快照随归档保留（GEPA 最肥信号：LLM 原始输出 vs 人工修订对照）。"""
+    orig = _orig_path(path)
+    if not orig.is_file():
+        return None
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / orig.name
+    shutil.move(str(orig), dest)
+    return dest
+
+
+def _migrate_cli(argv: List[str]) -> int:
+    """存量迁移 CLI：python3 evo_proposal.py migrate [--fix] [root]。"""
+    import argparse
+    parser = argparse.ArgumentParser(prog="evo_proposal migrate",
+                                     description="净化层存量迁移：扫描并修复归档中无法 strict 解析的提案")
+    parser.add_argument("--fix", action="store_true",
+                        help="修复写回（默认仅报告候选）")
+    parser.add_argument("root", nargs="?", default=str(
+        Path.home() / ".config/ar/skill-evo/proposals"),
+        help="归档根目录（默认 ~/.config/ar/skill-evo/proposals）")
+    args = parser.parse_args(argv)
+    report = migrate_proposals(Path(args.root), fix=args.fix)
+    print(f"ok={len(report['ok'])} repaired={len(report['repaired'])} "
+          f"unrecoverable={len(report['unrecoverable'])} unchanged={len(report['unchanged'])}")
+    for f in report["repaired"]:
+        print(f"  repaired: {f}")
+    for f in report["unrecoverable"]:
+        print(f"  unrecoverable: {f}")
+    return 1 if report["unrecoverable"] else 0
+
+
+if __name__ == "__main__":
+    sys.exit(_migrate_cli(sys.argv[2:])
+             if len(sys.argv) > 1 and sys.argv[1] == "migrate" else 0)
