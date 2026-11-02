@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "81dfdbf2-9002-45e1-905d-dca966251267",
+  "path": "dev-god",
+  "path_key": "dev-god",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

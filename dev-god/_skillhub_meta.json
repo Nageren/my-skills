@@ -1,0 +1,15 @@
+{
+  "slug": "dev-god",
+  "name": "编程大神.Skill",
+  "version": "1.2.4",
+  "installedAt": 1793583899353,
+  "source": "skillhub",
+  "namespace": "ake",
+  "canonicalName": "@ake/dev-god",
+  "iconSource": "https://skillhub-1388575217.cos.accelerate.myqcloud.com/skill-icons/uploads/783809/35df42ddf263488b8514c8dc45d1edd7.png",
+  "labels": {
+    "requires_api_key": "false"
+  },
+  "iconLocalPath": "/Users/marvin/.workbuddy/skills/dev-god__skillhub/_icon.png",
+  "iconDownloadedFrom": "https://skillhub-1388575217.cos.accelerate.myqcloud.com/skill-icons/uploads/783809/35df42ddf263488b8514c8dc45d1edd7.png"
+}

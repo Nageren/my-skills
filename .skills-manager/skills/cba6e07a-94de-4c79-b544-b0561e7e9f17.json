@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "cba6e07a-94de-4c79-b544-b0561e7e9f17",
+  "path": "songwriting-and-ai-music",
+  "path_key": "songwriting-and-ai-music",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "fa5f9404-906f-4cf7-9089-6b2d2a9229e6",
+  "path": "migrate-to-shoehorn-2",
+  "path_key": "migrate-to-shoehorn-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2c0a8c83-7f44-4687-8f4f-eac13b6f8034",
+  "path": "ci-cd-and-automation",
+  "path_key": "ci-cd-and-automation",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

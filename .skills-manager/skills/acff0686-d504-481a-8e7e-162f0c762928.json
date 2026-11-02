@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "acff0686-d504-481a-8e7e-162f0c762928",
+  "path": "shipping-and-launch",
+  "path_key": "shipping-and-launch",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}
